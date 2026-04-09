@@ -30,21 +30,16 @@ class GameDetailsScreenController extends GetxController with StateMixin<void> {
   init() async {
     change(null, status: RxStatus.loading());
     try {
-      if (gameDetails != GameDetails.empty()) {
+      if (gameDetails == GameDetails.empty()) {
         gameDetails = await _database.getGameDetails(
           steamID: steamID,
           appID: appID,
         );
+      }
 
-        if (gameDetails == GameDetails.empty()) {
-          change(null, status: RxStatus.empty());
-          return;
-        }
-        await _database.getAchievements(
-          gameDetails: gameDetails.obs,
-          steamID: steamID,
-          appID: appID,
-        );
+      if (gameDetails == GameDetails.empty()) {
+        change(null, status: RxStatus.empty());
+        return;
       }
 
       achievementsAndGlobalPercentages.value =

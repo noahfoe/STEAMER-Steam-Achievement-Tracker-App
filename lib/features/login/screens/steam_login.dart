@@ -6,7 +6,7 @@ import 'package:steam_login/steam_login.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class SteamLogin extends StatefulWidget {
-  SteamLogin({super.key});
+  const SteamLogin({super.key});
 
   @override
   State<SteamLogin> createState() => _SteamLoginState();

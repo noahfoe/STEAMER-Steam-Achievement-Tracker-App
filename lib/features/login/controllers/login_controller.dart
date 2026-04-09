@@ -14,7 +14,7 @@ class LoginController extends GetxController {
       // Send user to steam login page and wait until they return with their steamID
       var temp = await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => SteamLogin(),
+          builder: (context) => const SteamLogin(),
         ),
       );
       // If the user didn't log in, don't continue

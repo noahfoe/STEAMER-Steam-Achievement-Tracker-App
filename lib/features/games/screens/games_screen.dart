@@ -24,6 +24,15 @@ class GamesScreen extends StatelessWidget {
     required this.playerSummary,
   }) : super(key: key);
 
+  GameDetails _findGameDetails(Game game) {
+    for (final details in gameDetails) {
+      if (details.gameName == game.name) {
+        return details;
+      }
+    }
+    return GameDetails.empty().copyWith(gameName: game.name);
+  }
+
   @override
   Widget build(BuildContext context) {
     return GetBuilder<GamesScreenController>(
@@ -75,11 +84,8 @@ class GamesScreen extends StatelessWidget {
                         ),
                         GameListTile(
                           game: controller.filteredGamesList.value[index],
-                          gameDetails: gameDetails.firstWhere(
-                            (element) =>
-                                element.gameName ==
-                                controller.filteredGamesList.value[index].name,
-                          ),
+                          gameDetails:
+                              _findGameDetails(controller.filteredGamesList.value[index]),
                           steamId: steamID,
                         )
                       ],
@@ -87,11 +93,8 @@ class GamesScreen extends StatelessWidget {
                   }
                   return GameListTile(
                     game: controller.filteredGamesList.value[index],
-                    gameDetails: gameDetails.firstWhere(
-                      (element) =>
-                          element.gameName ==
-                          controller.filteredGamesList.value[index].name,
-                    ),
+                    gameDetails:
+                        _findGameDetails(controller.filteredGamesList.value[index]),
                     steamId: steamID,
                   );
                 },

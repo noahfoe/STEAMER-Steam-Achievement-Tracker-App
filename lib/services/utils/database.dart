@@ -1,5 +1,6 @@
 // ignore_for_file: depend_on_referenced_packages, invalid_use_of_protected_member
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:get/get.dart';
@@ -14,25 +15,13 @@ class Database extends GetxController {
   static final _instance = Database._internal();
   Database._internal();
 
-  @override
-  void onInit() {
-    super.onInit();
-    getSteamApiKey();
-  }
+  static const String _apiBaseUrl =
+      'https://steam-tracker-api.noahfoley6.workers.dev';
 
-  String steamApiKey = '';
-
-  /// Gets the Steam API key from the server.
-  Future<void> getSteamApiKey() async {
-    try {
-      // Get response to get the api key from the server
-      final response = await http.get(Uri.parse('http://192.168.0.195:8080'));
-
-      // Parse the response and set the api key
-      steamApiKey = json.decode(response.body)['steamApiKey'];
-    } catch (e) {
-      rethrow;
-    }
+  Uri _buildUri(String path, Map<String, String> queryParameters) {
+    return Uri.parse(
+      '$_apiBaseUrl$path',
+    ).replace(queryParameters: queryParameters);
   }
 
   /// Gets the user's basic Steam information from the Steam API.
@@ -41,8 +30,9 @@ class Database extends GetxController {
     try {
       /// Get response from Steam API
       final response = await http.get(
-        Uri.parse(
-          'http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=$steamApiKey&steamids=$steamID',
+        _buildUri(
+          '/player-summary',
+          {'steamId': steamID},
         ),
       );
 
@@ -62,8 +52,9 @@ class Database extends GetxController {
       getGlobalAchievementPercentagesForApp({required int appID}) async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid=$appID',
+        _buildUri(
+          '/global-achievement-percentages',
+          {'appId': '$appID'},
         ),
       );
       List<GlobalAchievementPercentages> temp = [];
@@ -83,8 +74,9 @@ class Database extends GetxController {
     try {
       // Get response from Steam API
       final response = await http.get(
-        Uri.parse(
-          'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=$steamApiKey&steamid=$steamID&format=json&include_appinfo=true&include_played_free_games=true',
+        _buildUri(
+          '/owned-games',
+          {'steamId': steamID},
         ),
       );
 
@@ -119,25 +111,46 @@ class Database extends GetxController {
     }
   }
 
-  Future<List<GameDetails>> getEveryOwnedGamesGameDetails(
-      {required String steamID}) async {
-    // Get all games and their appID's
-    final RxList<Game> games = await getPlayerGamesList(steamID: steamID);
-    // Create a temporary list to store the data
-    RxList<GameDetails> temp = RxList<GameDetails>.empty();
+  Future<List<GameDetails>> getEveryOwnedGamesGameDetails({
+    required String steamID,
+    List<Game>? games,
+    void Function(int completed, int total)? onProgress,
+  }) async {
+    final List<Game> achievementGames =
+        (games ?? await getPlayerGamesList(steamID: steamID))
+            .toList(growable: false);
 
-    // Loop through the games, getting their details
-    int i = 0;
-    for (var game in games) {
-      temp.add(await getGameDetails(steamID: steamID, appID: game.appId));
-      temp.value[i] = temp.value[i].copyWith(
-        gameName: games.value[i].name,
-      );
-      // Update name while we are here
-      i++;
+    if (achievementGames.isEmpty) {
+      onProgress?.call(0, 0);
+      return <GameDetails>[];
     }
 
-    // Return the data object
+    const batchSize = 20;
+    final List<GameDetails> temp = [];
+    int completed = 0;
+
+    for (int i = 0; i < achievementGames.length; i += batchSize) {
+      final batch = achievementGames.skip(i).take(batchSize).map((game) async {
+        try {
+          final details = await getGameDetails(
+            steamID: steamID,
+            appID: game.appId,
+          );
+          if ((details.allAchievements ?? const []).isEmpty) {
+            return null;
+          }
+          return details.copyWith(gameName: game.name);
+        } catch (_) {
+          return null;
+        } finally {
+          completed++;
+          onProgress?.call(completed, achievementGames.length);
+        }
+      }).toList(growable: false);
+
+      temp.addAll((await Future.wait(batch)).whereType<GameDetails>());
+    }
+
     return temp;
   }
 
@@ -150,8 +163,12 @@ class Database extends GetxController {
     try {
       // Get response from Steam API
       final response = await http.get(
-        Uri.parse(
-          'https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=$steamApiKey&appid=$appID&steamid=$steamID',
+        _buildUri(
+          '/game-schema',
+          {
+            'steamId': steamID,
+            'appId': '$appID',
+          },
         ),
       );
 
@@ -163,13 +180,14 @@ class Database extends GetxController {
 
       Rx<GameDetails> temp = GameDetails.fromMap(body).obs;
 
-      // Get achievements
-      temp = await getAchievements(
-            gameDetails: temp,
-            steamID: steamID,
-            appID: appID,
-          ) ??
-          temp;
+      if ((temp.value.allAchievements ?? const []).isNotEmpty) {
+        temp = await getAchievements(
+              gameDetails: temp,
+              steamID: steamID,
+              appID: appID,
+            ) ??
+            temp;
+      }
 
       // Parse data into data object classes and return it
       return temp.value;
@@ -187,8 +205,12 @@ class Database extends GetxController {
     try {
       // Get response from Steam API
       final response = await http.get(
-        Uri.parse(
-          'http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?key=$steamApiKey&appid=$appID&steamid=$steamID',
+        _buildUri(
+          '/player-achievements',
+          {
+            'steamId': steamID,
+            'appId': '$appID',
+          },
         ),
       );
 
@@ -199,16 +221,22 @@ class Database extends GetxController {
       // If there is no response, return
       if (body == null || body.isEmpty || body == []) return null;
 
+      final achievementLookup = <String, dynamic>{
+        for (final achievement in body)
+          if (achievement is Map<String, dynamic> &&
+              achievement['apiname'] != null)
+            achievement['apiname'] as String: achievement,
+      };
+
       // Update the current achievements 'achieved' value
       gameDetails.value = gameDetails.value.copyWith(
         allAchievements: gameDetails.value.allAchievements!
             .map(
               (e) => e.copyWith(
-                  achieved: body.firstWhere(
-                        (element) => element['apiname'] == e.name,
-                        orElse: () => null,
-                      )['achieved'] ??
-                      0),
+                achieved: (achievementLookup[e.name]
+                        as Map<String, dynamic>?)?['achieved'] as int? ??
+                    0,
+              ),
             )
             .toList(),
       );
@@ -241,8 +269,9 @@ class Database extends GetxController {
     try {
       return http
           .get(
-            Uri.parse(
-              'http://api.steampowered.com/IPlayerService/GetSteamLevel/v1/?key=$steamApiKey&steamid=$steamID',
+            _buildUri(
+              '/steam-level',
+              {'steamId': steamID},
             ),
           )
           .then((value) => json.decode(value.body)['response']['player_level']);

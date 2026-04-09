@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:steam_achievement_tracker/services/models/games/achievement.dart';
 import 'package:steam_achievement_tracker/services/models/games/global_achievement_percentages.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
+import 'package:steam_achievement_tracker/services/widgets/network_icon_image.dart';
 
 class GameDetailsListTile extends StatelessWidget {
   final Achievement achievement;
@@ -18,8 +19,8 @@ class GameDetailsListTile extends StatelessWidget {
     return ListTile(
       tileColor: KColors.backgroundColor,
       leading: achievement.achieved == 1
-          ? Image.network(achievement.icon)
-          : Image.network(achievement.iconGray),
+          ? NetworkIconImage(imageUrl: achievement.icon)
+          : NetworkIconImage(imageUrl: achievement.iconGray),
       title: Text(
         achievement.displayName,
         style: const TextStyle(

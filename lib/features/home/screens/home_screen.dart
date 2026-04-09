@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:steam_achievement_tracker/features/home/controllers/home_screen_controller.dart';
+import 'package:steam_achievement_tracker/features/profile/screens/achievements_screen.dart';
+import 'package:steam_achievement_tracker/features/profile/screens/profile_screen.dart';
 import 'package:steam_achievement_tracker/features/settings/screens/settings_screen.dart';
 import 'package:steam_achievement_tracker/services/models/user/user_steam_information.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
@@ -19,6 +21,17 @@ class HomeScreen extends StatelessWidget {
     Key? key,
     required this.steamID,
   }) : super(key: key);
+
+  String _achievementStatValue(
+    HomeScreenController controller,
+    String Function() resolver,
+  ) {
+    if (controller.gameDetails.isEmpty &&
+        controller.isLoadingAchievementStats.value) {
+      return '--';
+    }
+    return resolver();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +65,8 @@ class HomeScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 10),
                               const _StatsBody(),
+                              const SizedBox(height: 16),
+                              const _AchievementSyncBanner(),
                             ],
                           ),
                         ),
@@ -66,40 +81,50 @@ class HomeScreen extends StatelessWidget {
                             Obx(
                               () => HomeScreenContainer(
                                 title: "Total Achievements",
-                                subtitle: controller.gameDetails.value
-                                    .map((e) => e.allAchievements)
-                                    .expand((element) => element!)
-                                    .length
-                                    .toString()
-                                    .toNumberFormat(),
+                                subtitle: _achievementStatValue(
+                                  controller,
+                                  () => controller.gameDetails
+                                      .map((e) => e.allAchievements ?? const [])
+                                      .expand((element) => element)
+                                      .length
+                                      .toString()
+                                      .toNumberFormat(),
+                                ),
                               ),
                             ),
                             Obx(
                               () => HomeScreenContainer(
                                 title: "Unlocked Achievements",
-                                subtitle: controller.gameDetails.value
-                                    .map((e) => e.unlockedAchievements)
-                                    .expand((element) => element!)
-                                    .length
-                                    .toString()
-                                    .toNumberFormat(),
+                                subtitle: _achievementStatValue(
+                                  controller,
+                                  () => controller.gameDetails
+                                      .map(
+                                          (e) => e.unlockedAchievements ?? const [])
+                                      .expand((element) => element)
+                                      .length
+                                      .toString()
+                                      .toNumberFormat(),
+                                ),
                               ),
                             ),
                             Obx(
                               () => HomeScreenContainer(
                                 title: "Locked Achievements",
-                                subtitle: controller.gameDetails.value
-                                    .map((e) => e.lockedAchievements)
-                                    .expand((element) => element!)
-                                    .length
-                                    .toString()
-                                    .toNumberFormat(),
+                                subtitle: _achievementStatValue(
+                                  controller,
+                                  () => controller.gameDetails
+                                      .map((e) => e.lockedAchievements ?? const [])
+                                      .expand((element) => element)
+                                      .length
+                                      .toString()
+                                      .toNumberFormat(),
+                                ),
                               ),
                             ),
                             Obx(
                               () => HomeScreenContainer(
                                 title: "Total Games",
-                                subtitle: controller.gameDetails.value.length
+                                subtitle: controller.playerGamesList.length
                                     .toString()
                                     .toNumberFormat(),
                               ),
@@ -108,8 +133,8 @@ class HomeScreen extends StatelessWidget {
                               () => HomeScreenContainer(
                                 title: "Total Hours Played",
                                 subtitle:
-                                    controller.playerGamesList.value.isNotEmpty
-                                        ? controller.playerGamesList.value
+                                    controller.playerGamesList.isNotEmpty
+                                        ? controller.playerGamesList
                                             .map((e) => e.playtimeForever)
                                             .reduce((value, element) =>
                                                 value! + element!)!
@@ -122,16 +147,20 @@ class HomeScreen extends StatelessWidget {
                             Obx(
                               () => HomeScreenContainer(
                                 title: "100%ed Games",
-                                subtitle: controller.gameDetails.value
-                                    .where(
-                                      (element) => element
-                                              .allAchievements!.isEmpty
-                                          ? false
-                                          : element.lockedAchievements!.isEmpty,
-                                    )
-                                    .length
-                                    .toString()
-                                    .toNumberFormat(),
+                                subtitle: _achievementStatValue(
+                                  controller,
+                                  () => controller.gameDetails
+                                      .where(
+                                        (element) =>
+                                            (element.allAchievements ?? const [])
+                                                .isNotEmpty &&
+                                            (element.lockedAchievements ?? const [])
+                                                .isEmpty,
+                                      )
+                                      .length
+                                      .toString()
+                                      .toNumberFormat(),
+                                ),
                               ),
                             ),
                           ],
@@ -152,7 +181,7 @@ class HomeScreen extends StatelessWidget {
               ),
               Container(
                 height: 25,
-                color: KColors.darkBackgroundColor.withOpacity(0.5),
+                color: KColors.darkBackgroundColor.withValues(alpha: 0.5),
                 child: Center(
                   child: Text(
                     "Steam ID: ${controller.steamID}",
@@ -241,6 +270,62 @@ class _StatsBody extends GetView<HomeScreenController> {
   @override
   Widget build(BuildContext context) {
     return Container();
+  }
+}
+
+class _AchievementSyncBanner extends GetView<HomeScreenController> {
+  const _AchievementSyncBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final isVisible = controller.isLoadingAchievementStats.value ||
+          controller.achievementSyncStatus.value == 'Achievement data synced';
+      if (!isVisible) {
+        return const SizedBox.shrink();
+      }
+
+      final total = controller.totalAchievementGameCount.value;
+      final loaded = controller.loadedAchievementGameCount.value;
+      final progress =
+          total > 0 ? (loaded / total).clamp(0.0, 1.0) : null;
+
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: KColors.primaryColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: KColors.lightBackgroundColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              controller.isLoadingAchievementStats.value
+                  ? controller.achievementSyncStatus.value
+                  : 'Achievement data is up to date',
+              style: const TextStyle(
+                color: KColors.activeTextColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                minHeight: 8,
+                value: controller.isLoadingAchievementStats.value ? progress : 1,
+                backgroundColor: KColors.darkBackgroundColor,
+                valueColor:
+                    const AlwaysStoppedAnimation(KColors.menuHighlightColor),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -359,23 +444,49 @@ class _Drawer extends GetView<HomeScreenController> {
             ),
           ),
           const SizedBox(height: 10),
-          const DrawerTile(
+          DrawerTile(
             text: "Profile",
-            icon: Icon(
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => ProfileScreen(
+                    playerSummary: controller.playerSummary.value,
+                    steamLevel: controller.steamLevel.value,
+                    steamId: controller.steamID,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(
               Icons.person_outline,
               color: KColors.inactiveTextColor,
             ),
           ),
-          const DrawerTile(
+          DrawerTile(
             text: "Library",
-            icon: Icon(
+            onTap: () {
+              Navigator.of(context).pop();
+              controller.navigateToGamesScreen(context);
+            },
+            icon: const Icon(
               Icons.library_books_outlined,
               color: KColors.inactiveTextColor,
             ),
           ),
-          const DrawerTile(
+          DrawerTile(
             text: "Achievements",
-            icon: Icon(
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => AchievementsScreen(
+                    gameDetails: controller.gameDetails,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(
               Icons.checklist_outlined,
               color: KColors.inactiveTextColor,
             ),
