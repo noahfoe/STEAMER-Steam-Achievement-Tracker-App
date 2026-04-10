@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -17,6 +18,7 @@ class Database extends GetxController {
 
   static const String _apiBaseUrl =
       'https://steam-tracker-api.noahfoley6.workers.dev';
+  static const Duration _requestTimeout = Duration(seconds: 20);
 
   Uri _buildUri(String path, Map<String, String> queryParameters) {
     return Uri.parse(
@@ -24,91 +26,112 @@ class Database extends GetxController {
     ).replace(queryParameters: queryParameters);
   }
 
+  Future<Map<String, dynamic>> _getJson(
+    String path,
+    Map<String, String> queryParameters,
+  ) async {
+    try {
+      final response = await http.get(
+        _buildUri(path, queryParameters),
+        headers: const {
+          'accept': 'application/json',
+          'cache-control': 'no-cache',
+        },
+      ).timeout(_requestTimeout);
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppNetworkException(
+          'The server returned ${response.statusCode}. Please try again.',
+        );
+      }
+
+      final decoded = json.decode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        throw const AppNetworkException(
+          'The server response was not in the expected format.',
+        );
+      }
+
+      if (decoded['error'] is String) {
+        throw AppNetworkException(decoded['error'] as String);
+      }
+
+      return decoded;
+    } on TimeoutException {
+      throw const AppNetworkException(
+        'The request timed out. Check your connection and try again.',
+      );
+    } on SocketException {
+      throw const AppNetworkException(
+        'No internet connection. Check your network and try again.',
+      );
+    } on FormatException {
+      throw const AppNetworkException(
+        'The server response could not be read. Please try again later.',
+      );
+    }
+  }
+
   /// Gets the user's basic Steam information from the Steam API.
   Future<UserSteamInformation> getPlayerSummary(
       {required String steamID}) async {
-    try {
-      /// Get response from Steam API
-      final response = await http.get(
-        _buildUri(
-          '/player-summary',
-          {'steamId': steamID},
-        ),
-      );
+    final response = await _getJson(
+      '/player-summary',
+      {'steamId': steamID},
+    );
 
-      // Parse data into data object classes
-      UserSteamInformation temp = UserSteamInformation.fromSteamAPI(
-        json.decode(response.body)['response']['players'][0],
+    final players =
+        (response['response'] as Map<String, dynamic>?)?['players'] as List?;
+    if (players == null || players.isEmpty || players.first is! Map<String, dynamic>) {
+      throw const AppNetworkException(
+        'We could not find a public Steam profile for this account.',
       );
-
-      /// Return the data object
-      return temp;
-    } catch (e) {
-      rethrow;
     }
+
+    return UserSteamInformation.fromSteamAPI(players.first);
   }
 
   Future<RxList<GlobalAchievementPercentages>>
       getGlobalAchievementPercentagesForApp({required int appID}) async {
-    try {
-      final response = await http.get(
-        _buildUri(
-          '/global-achievement-percentages',
-          {'appId': '$appID'},
-        ),
-      );
-      List<GlobalAchievementPercentages> temp = [];
-      Map<String, dynamic> body = json.decode(response.body);
-      List achievements = body['achievementpercentages']['achievements'];
-      for (var element in achievements) {
+    final body = await _getJson(
+      '/global-achievement-percentages',
+      {'appId': '$appID'},
+    );
+    final achievements =
+        (body['achievementpercentages'] as Map<String, dynamic>?)?['achievements']
+            as List?;
+    if (achievements == null || achievements.isEmpty) {
+      return <GlobalAchievementPercentages>[].obs;
+    }
+
+    final temp = <GlobalAchievementPercentages>[];
+    for (final element in achievements) {
+      if (element is Map<String, dynamic>) {
         temp.add(GlobalAchievementPercentages.fromMap(element));
       }
-      return temp.obs;
-    } catch (e) {
-      rethrow;
     }
+    return temp.obs;
   }
 
   /// Gets the user's games list from the Steam API.
   Future<RxList<Game>> getPlayerGamesList({required String steamID}) async {
-    try {
-      // Get response from Steam API
-      final response = await http.get(
-        _buildUri(
-          '/owned-games',
-          {'steamId': steamID},
-        ),
-      );
+    final body = await _getJson(
+      '/owned-games',
+      {'steamId': steamID},
+    );
 
-      // Parse response into a map (for code readability)
-      Map<String, dynamic>? body = json.decode(response.body);
-
-      // If there is no response, return an empty list
-      if (body == null || body.isEmpty) return List<Game>.empty().obs;
-
-      // If there are no games, return an empty list
-      if (body['response']['games'] == null ||
-          body['response']['games'] == []) {
-        return List<Game>.empty().obs;
-      }
-
-      // Create a temporary list to store the data
-      RxList<Game> temp = RxList<Game>.empty();
-
-      // Loop through the data
-      for (int i = 0; i < body['response']['games'].length; i++) {
-        // Parse data into data object classes and add to the list
-        temp.add(
-          Game.fromMap(
-            body['response']['games'][i],
-          ),
-        );
-      }
-      // Return the data object
-      return temp;
-    } catch (e) {
-      rethrow;
+    final games = (body['response'] as Map<String, dynamic>?)?['games'] as List?;
+    if (games == null || games.isEmpty) {
+      return <Game>[].obs;
     }
+
+    final temp = <Game>[].obs;
+    for (final game in games) {
+      if (game is Map<String, dynamic>) {
+        temp.add(Game.fromMap(game));
+      }
+    }
+    return temp;
   }
 
   Future<List<GameDetails>> getEveryOwnedGamesGameDetails({
@@ -160,40 +183,30 @@ class Database extends GetxController {
   /// Which is then added to the GameDetails object.
   Future<GameDetails> getGameDetails(
       {required String steamID, required int appID}) async {
-    try {
-      // Get response from Steam API
-      final response = await http.get(
-        _buildUri(
-          '/game-schema',
-          {
-            'steamId': steamID,
-            'appId': '$appID',
-          },
-        ),
-      );
+    final body = await _getJson(
+      '/game-schema',
+      {
+        'steamId': steamID,
+        'appId': '$appID',
+      },
+    );
 
-      // Parse response into a map (for code readability)
-      Map<String, dynamic>? body = json.decode(response.body);
-
-      // If there is no response, return an empty list
-      if (body == null || body.isEmpty) return GameDetails.empty();
-
-      Rx<GameDetails> temp = GameDetails.fromMap(body).obs;
-
-      if ((temp.value.allAchievements ?? const []).isNotEmpty) {
-        temp = await getAchievements(
-              gameDetails: temp,
-              steamID: steamID,
-              appID: appID,
-            ) ??
-            temp;
-      }
-
-      // Parse data into data object classes and return it
-      return temp.value;
-    } catch (e) {
-      rethrow;
+    if (body.isEmpty || body['game'] == null) {
+      return GameDetails.empty();
     }
+
+    Rx<GameDetails> temp = GameDetails.fromMap(body).obs;
+
+    if ((temp.value.allAchievements ?? const []).isNotEmpty) {
+      temp = await getAchievements(
+            gameDetails: temp,
+            steamID: steamID,
+            appID: appID,
+          ) ??
+          temp;
+    }
+
+    return temp.value;
   }
 
   /// Gets the user's achievements for a specific game from the Steam API.
@@ -202,81 +215,75 @@ class Database extends GetxController {
     required String steamID,
     required int appID,
   }) async {
-    try {
-      // Get response from Steam API
-      final response = await http.get(
-        _buildUri(
-          '/player-achievements',
-          {
-            'steamId': steamID,
-            'appId': '$appID',
-          },
-        ),
-      );
+    final response = await _getJson(
+      '/player-achievements',
+      {
+        'steamId': steamID,
+        'appId': '$appID',
+      },
+    );
 
-      // Parse response into a list of achievements (for code readability)
-      final List? body =
-          json.decode(response.body)['playerstats']['achievements'];
+    final body =
+        (response['playerstats'] as Map<String, dynamic>?)?['achievements'] as List?;
 
-      // If there is no response, return
-      if (body == null || body.isEmpty || body == []) return null;
+    if (body == null || body.isEmpty) return null;
 
-      final achievementLookup = <String, dynamic>{
-        for (final achievement in body)
-          if (achievement is Map<String, dynamic> &&
-              achievement['apiname'] != null)
-            achievement['apiname'] as String: achievement,
-      };
+    final achievementLookup = <String, dynamic>{
+      for (final achievement in body)
+        if (achievement is Map<String, dynamic> && achievement['apiname'] != null)
+          achievement['apiname'] as String: achievement,
+    };
 
-      // Update the current achievements 'achieved' value
-      gameDetails.value = gameDetails.value.copyWith(
-        allAchievements: gameDetails.value.allAchievements!
-            .map(
-              (e) => e.copyWith(
-                achieved: (achievementLookup[e.name]
-                        as Map<String, dynamic>?)?['achieved'] as int? ??
-                    0,
-              ),
-            )
-            .toList(),
-      );
-
-      // Sort list so that achieved achievements are at the top
-      gameDetails.value.allAchievements!.sort(
-        (a, b) => b.achieved.compareTo(a.achieved),
-      );
-
-      // Unlocked
-      gameDetails.value = gameDetails.value.copyWith(
-        unlockedAchievements: gameDetails.value.allAchievements!
-            .where((element) => element.achieved == 1)
-            .toList(),
-      );
-
-      // Locked
-      gameDetails.value = gameDetails.value.copyWith(
-        lockedAchievements: gameDetails.value.allAchievements!
-            .where((element) => element.achieved == 0)
-            .toList(),
-      );
-      return gameDetails;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<int> getSteamLevel({required String steamID}) {
-    try {
-      return http
-          .get(
-            _buildUri(
-              '/steam-level',
-              {'steamId': steamID},
+    gameDetails.value = gameDetails.value.copyWith(
+      allAchievements: gameDetails.value.allAchievements!
+          .map(
+            (e) => e.copyWith(
+              achieved: (achievementLookup[e.name]
+                      as Map<String, dynamic>?)?['achieved'] as int? ??
+                  0,
             ),
           )
-          .then((value) => json.decode(value.body)['response']['player_level']);
-    } catch (e) {
-      rethrow;
-    }
+          .toList(),
+    );
+
+    gameDetails.value.allAchievements!.sort(
+      (a, b) => b.achieved.compareTo(a.achieved),
+    );
+
+    gameDetails.value = gameDetails.value.copyWith(
+      unlockedAchievements: gameDetails.value.allAchievements!
+          .where((element) => element.achieved == 1)
+          .toList(),
+    );
+
+    gameDetails.value = gameDetails.value.copyWith(
+      lockedAchievements: gameDetails.value.allAchievements!
+          .where((element) => element.achieved == 0)
+          .toList(),
+    );
+    return gameDetails;
   }
+
+  Future<int> getSteamLevel({required String steamID}) async {
+    final value = await _getJson(
+      '/steam-level',
+      {'steamId': steamID},
+    );
+    final level = (value['response'] as Map<String, dynamic>?)?['player_level'];
+    if (level is! int) {
+      throw const AppNetworkException(
+        'We could not read the Steam level for this profile.',
+      );
+    }
+    return level;
+  }
+}
+
+class AppNetworkException implements Exception {
+  final String message;
+
+  const AppNetworkException(this.message);
+
+  @override
+  String toString() => message;
 }

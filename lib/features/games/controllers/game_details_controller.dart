@@ -49,4 +49,8 @@ class GameDetailsScreenController extends GetxController with StateMixin<void> {
     }
     change(null, status: RxStatus.success());
   }
+
+  Future<void> retry() async {
+    await init();
+  }
 }

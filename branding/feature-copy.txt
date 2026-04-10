@@ -1,0 +1,8 @@
+STEAMER helps you track your Steam profile, browse your library, and follow achievement completion in one polished dashboard.
+
+Highlights:
+- track unlocked and locked achievements
+- review perfected games
+- browse your Steam library quickly
+- refresh your profile and library on demand
+- pick up where you left off with session restore

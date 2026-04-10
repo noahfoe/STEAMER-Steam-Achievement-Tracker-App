@@ -2,18 +2,24 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:steam_achievement_tracker/features/home/screens/home_screen.dart';
 import 'package:steam_achievement_tracker/features/login/screens/login_screen.dart';
+import 'package:steam_achievement_tracker/services/utils/colors.dart';
 import 'package:steam_achievement_tracker/services/utils/database.dart';
 import 'package:steam_achievement_tracker/services/utils/logger.dart';
 import 'package:steam_achievement_tracker/services/utils/preference_utils.dart';
 
-void main() {
+Future<void> main() async {
   registerFlutterErrorHandler(
     (error, trace) => logger.e(error, stackTrace: trace),
   );
-  PreferenceUtils.init();
+  await PreferenceUtils.init();
   Get.put(Database.instance);
-  runApp(const MyApp());
+  runApp(
+    MyApp(
+      initialSteamId: PreferenceUtils.getLastSteamId(),
+    ),
+  );
 }
 
 /// Registers an error callback for uncaught exceptions and flutter errors.
@@ -29,18 +35,43 @@ void registerFlutterErrorHandler(
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String? initialSteamId;
+
+  const MyApp({
+    super.key,
+    required this.initialSteamId,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'STEAMER - The Steam Achievement Tracker App',
+      title: 'STEAMER',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: KColors.menuHighlightColor,
+          brightness: Brightness.dark,
+        ),
         useMaterial3: true,
+        scaffoldBackgroundColor: KColors.backgroundColor,
+        canvasColor: KColors.backgroundColor,
+        cardColor: KColors.primaryColor,
+        dividerColor: KColors.lightBackgroundColor,
+        splashColor: KColors.menuHighlightColor.withValues(alpha: 0.08),
+        highlightColor: KColors.menuHighlightColor.withValues(alpha: 0.06),
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.iOS: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.macOS: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+          },
+        ),
       ),
-      home: const LoginScreen(),
+      home: initialSteamId == null || initialSteamId!.isEmpty
+          ? const LoginScreen()
+          : HomeScreen(steamID: initialSteamId!),
     );
   }
 }

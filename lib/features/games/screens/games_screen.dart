@@ -8,6 +8,7 @@ import 'package:steam_achievement_tracker/services/models/games/game.dart';
 import 'package:steam_achievement_tracker/services/models/games/game_details.dart';
 import 'package:steam_achievement_tracker/services/models/user/user_steam_information.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
+import 'package:steam_achievement_tracker/services/widgets/async_state_panel.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
 class GamesScreen extends StatelessWidget {
@@ -48,6 +49,19 @@ class GamesScreen extends StatelessWidget {
           ),
           body: controller.obx(
             onLoading: const Center(child: CircularProgressIndicator()),
+            onEmpty: const AsyncStatePanel(
+              icon: Icons.library_books_outlined,
+              title: 'No Games Found',
+              message:
+                  'This Steam account does not have any visible games to display yet.',
+            ),
+            onError: (error) => AsyncStatePanel(
+              icon: Icons.wifi_off_rounded,
+              title: 'Library Unavailable',
+              message: error ?? 'We could not load your Steam library.',
+              actionLabel: 'Try Again',
+              onAction: controller.retry,
+            ),
             (state) => Obx(
               () => ListView.builder(
                 itemCount: controller.filteredGamesList.value.length,

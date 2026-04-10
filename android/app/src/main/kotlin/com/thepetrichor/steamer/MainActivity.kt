@@ -1,4 +1,4 @@
-package com.example.steam_achievement_tracker
+package com.thepetrichor.steamer
 
 import io.flutter.embedding.android.FlutterActivity
 

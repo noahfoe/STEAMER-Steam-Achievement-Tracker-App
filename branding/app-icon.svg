@@ -1,0 +1,36 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="130" y1="112" x2="884" y2="908" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F1A26"/>
+      <stop offset="0.5" stop-color="#162536"/>
+      <stop offset="1" stop-color="#22405B"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="262" y1="328" x2="804" y2="796" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8DDFFF"/>
+      <stop offset="1" stop-color="#2F8EEC"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="350" y1="500" x2="558" y2="754" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2FAFF"/>
+      <stop offset="1" stop-color="#B4D8F2"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="240" fill="#0C131B"/>
+  <rect x="88" y="88" width="848" height="848" rx="196" fill="url(#bg)"/>
+
+  <circle cx="754" cy="292" r="118" fill="#101A26" stroke="url(#cyan)" stroke-width="36"/>
+  <circle cx="754" cy="292" r="44" fill="#8DDFFF"/>
+
+  <path d="M542 520L668 394" stroke="url(#cyan)" stroke-width="62" stroke-linecap="round"/>
+  <path d="M310 742C322 536 470 392 664 362" stroke="#2D4D68" stroke-width="22" stroke-linecap="round" opacity="0.9"/>
+
+  <circle cx="416" cy="628" r="220" fill="#0F1A26" stroke="url(#cyan)" stroke-width="34"/>
+  <circle cx="416" cy="628" r="166" fill="#132232"/>
+  <circle cx="274" cy="774" r="58" fill="#0F1A26" stroke="#79D3FF" stroke-width="24"/>
+
+  <path d="M354 553H478C472 624 451 659 416 676C381 659 360 624 354 553Z" fill="url(#metal)"/>
+  <path d="M344 559C319 559 300 576 300 600C300 623 318 641 341 641" stroke="url(#metal)" stroke-width="24" stroke-linecap="round"/>
+  <path d="M488 559C513 559 532 576 532 600C532 623 514 641 491 641" stroke="url(#metal)" stroke-width="24" stroke-linecap="round"/>
+  <rect x="392" y="680" width="48" height="58" rx="12" fill="url(#metal)"/>
+  <rect x="350" y="730" width="132" height="34" rx="17" fill="url(#metal)"/>
+</svg>

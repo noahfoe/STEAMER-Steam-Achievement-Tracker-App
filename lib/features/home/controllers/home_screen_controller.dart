@@ -5,9 +5,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:steam_achievement_tracker/features/games/screens/games_screen.dart';
+import 'package:steam_achievement_tracker/features/login/screens/login_screen.dart';
 import 'package:steam_achievement_tracker/services/models/games/game.dart';
 import 'package:steam_achievement_tracker/services/models/games/game_details.dart';
 import 'package:steam_achievement_tracker/services/models/user/user_steam_information.dart';
+import 'package:steam_achievement_tracker/services/utils/app_route.dart';
 import 'package:steam_achievement_tracker/services/utils/database.dart';
 import 'package:steam_achievement_tracker/services/utils/preference_utils.dart';
 
@@ -115,7 +117,7 @@ class HomeScreenController extends GetxController with StateMixin<void> {
   /// Navigate the user to the Games Screen.
   void navigateToGamesScreen(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(
+      AppRoute.fadeSlide(
         builder: (context) => GamesScreen(
           steamID: steamID,
           playerGamesList: playerGamesList,
@@ -123,6 +125,35 @@ class HomeScreenController extends GetxController with StateMixin<void> {
           playerSummary: playerSummary.value,
         ),
       ),
+    );
+  }
+
+  Future<void> refreshAllData() async {
+    await PreferenceUtils.clearCachedData();
+    playerSummary.value = UserSteamInformation.empty();
+    playerGamesList.clear();
+    gameDetails.clear();
+    steamLevel.value = 0;
+    loadedAchievementGameCount.value = 0;
+    totalAchievementGameCount.value = 0;
+    achievementSyncStatus.value = '';
+    await init();
+  }
+
+  Future<void> signOut(BuildContext context) async {
+    await PreferenceUtils.clearSessionData();
+    playerSummary.value = UserSteamInformation.empty();
+    playerGamesList.clear();
+    gameDetails.clear();
+    steamLevel.value = 0;
+    if (!context.mounted) {
+      return;
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      AppRoute.fadeSlide(
+        builder: (context) => const LoginScreen(),
+      ),
+      (route) => false,
     );
   }
 }

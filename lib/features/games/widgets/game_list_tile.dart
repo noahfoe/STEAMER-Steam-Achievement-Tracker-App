@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:steam_achievement_tracker/features/games/screens/game_details_screen.dart';
 import 'package:steam_achievement_tracker/services/models/games/game.dart';
 import 'package:steam_achievement_tracker/services/models/games/game_details.dart';
+import 'package:steam_achievement_tracker/services/utils/app_route.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
 
 class GameListTile extends StatelessWidget {
@@ -21,7 +22,7 @@ class GameListTile extends StatelessWidget {
     return ListTile(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
+          AppRoute.fadeSlide(
             builder: (context) => GameDetailsScreen(
               steamID: steamId,
               game: game,

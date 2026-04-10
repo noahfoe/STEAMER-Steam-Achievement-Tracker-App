@@ -3,14 +3,31 @@ import 'package:steam_achievement_tracker/services/utils/colors.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  final Future<void> Function()? onSignOut;
+  final Future<void> Function()? onRefreshLibrary;
+
+  const SettingsScreen({
+    Key? key,
+    this.onSignOut,
+    this.onRefreshLibrary,
+  }) : super(key: key);
+
+  Future<void> _showAboutDialog(BuildContext context) async {
+    showAboutDialog(
+      context: context,
+      applicationName: 'STEAMER',
+      applicationVersion: '1.0.0',
+      applicationLegalese:
+          'Steam achievement tracking companion app. Not affiliated with Valve.',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: myAppBar(title: "Settings"),
       backgroundColor: KColors.backgroundColor,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: ListView(
         children: [
           _SettingsSection(
             title: const Text(
@@ -22,30 +39,12 @@ class SettingsScreen extends StatelessWidget {
             children: [
               _BasicSettingButton(
                 title: "About",
-                subtitle: "Version 1.0",
+                subtitle: "Version 1.0.0",
                 icon: const Icon(
                   Icons.adb_outlined,
                   color: KColors.inactiveTextColor,
                 ),
-                onTap: () {},
-              ),
-              _BasicSettingButton(
-                title: "Donate",
-                subtitle: "Contributions are welcomed!",
-                icon: const Icon(
-                  Icons.attach_money_rounded,
-                  color: KColors.inactiveTextColor,
-                ),
-                onTap: () {},
-              ),
-              _BasicSettingButton(
-                title: "Support",
-                subtitle: "For help and posting ideas.",
-                icon: const Icon(
-                  Icons.support_agent,
-                  color: KColors.inactiveTextColor,
-                ),
-                onTap: () {},
+                onTap: () => _showAboutDialog(context),
               ),
             ],
           ),
@@ -65,20 +64,22 @@ class SettingsScreen extends StatelessWidget {
                   Icons.logout,
                   color: KColors.inactiveTextColor,
                 ),
-                onTap: () {},
+                onTap: onSignOut == null ? null : () => onSignOut!.call(),
               ),
               _BasicSettingButton(
-                title: "Refresh Game",
+                title: "Refresh Library",
                 subtitle:
-                    "If you do not see your game in the app, try refreshing it here.",
+                    "Re-sync your profile, library, and achievements from Steam.",
                 icon: const Icon(
                   Icons.refresh,
                   color: KColors.inactiveTextColor,
                 ),
-                onTap: () {},
+                onTap:
+                    onRefreshLibrary == null ? null : () => onRefreshLibrary!.call(),
               ),
             ],
           ),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -144,39 +145,42 @@ class _BasicSettingButton extends StatelessWidget {
   }) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        width: double.infinity,
-        color: KColors.backgroundColor,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 20.0),
-          child: Row(
-            children: [
-              icon,
-              const SizedBox(width: 20),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: KColors.activeTextColor,
-                    ),
-                  ),
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.7,
-                    child: Text(
-                      subtitle,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          width: double.infinity,
+          color: KColors.backgroundColor,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 20.0),
+            child: Row(
+              children: [
+                icon,
+                const SizedBox(width: 20),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
                       style: const TextStyle(
-                        color: KColors.inactiveTextColor,
+                        color: KColors.activeTextColor,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.7,
+                      child: Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: KColors.inactiveTextColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

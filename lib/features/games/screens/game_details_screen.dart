@@ -7,6 +7,7 @@ import 'package:steam_achievement_tracker/features/games/widgets/expandable_game
 import 'package:steam_achievement_tracker/services/models/games/game.dart';
 import 'package:steam_achievement_tracker/services/models/games/game_details.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
+import 'package:steam_achievement_tracker/services/widgets/async_state_panel.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
 class GameDetailsScreen extends StatelessWidget {
@@ -35,6 +36,19 @@ class GameDetailsScreen extends StatelessWidget {
           appBar: myAppBar(title: game.name),
           body: controller.obx(
             onLoading: const Center(child: CircularProgressIndicator()),
+            onEmpty: AsyncStatePanel(
+              icon: Icons.emoji_events_outlined,
+              title: 'No Achievement Data',
+              message:
+                  '${game.name} does not currently expose Steam achievement data for this profile.',
+            ),
+            onError: (error) => AsyncStatePanel(
+              icon: Icons.cloud_off,
+              title: 'Could Not Load Achievements',
+              message: error ?? 'Please try again in a moment.',
+              actionLabel: 'Retry',
+              onAction: controller.retry,
+            ),
             (state) => Column(
               children: [
                 // Header Image

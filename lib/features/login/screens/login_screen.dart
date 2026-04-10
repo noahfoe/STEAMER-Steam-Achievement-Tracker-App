@@ -18,16 +18,31 @@ class LoginScreen extends StatelessWidget {
         init: LoginController(),
         initState: (_) {},
         builder: (controller) {
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Center(
-                child: Button(
-                  onTap: () => controller.login(context),
-                  text: "Login",
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    'Track your Steam profile, library, and achievements in one place.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: KColors.inactiveTextColor,
+                      fontSize: 16,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                Obx(
+                  () => Button(
+                    onTap: () => controller.login(context),
+                    text: controller.isLoggingIn.value ? "Opening Steam..." : "Login",
+                    isDisabled: controller.isLoggingIn.value,
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),

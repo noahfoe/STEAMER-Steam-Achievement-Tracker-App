@@ -75,9 +75,9 @@ class Game extends Equatable {
       playtime2Weeks:
           map['playtime_2weeks'] != null ? map['playtime_2weeks'] as int : 0,
       imgIconUrl:
-          'http://media.steampowered.com/steamcommunity/public/images/apps/${map['appid']}/${map['img_icon_url']}.jpg',
+          'https://media.steampowered.com/steamcommunity/public/images/apps/${map['appid']}/${map['img_icon_url']}.jpg',
       imgLogoUrl:
-          'http://media.steampowered.com/steamcommunity/public/images/apps/${map['appid']}/${map['img_logo_url']}.jpg',
+          'https://media.steampowered.com/steamcommunity/public/images/apps/${map['appid']}/${map['img_logo_url']}.jpg',
       hasCommunityVisibleStats: map['has_community_visible_stats'] ?? false,
     );
   }

@@ -4,16 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:steam_achievement_tracker/features/home/screens/home_screen.dart';
 import 'package:steam_achievement_tracker/features/login/screens/steam_login.dart';
+import 'package:steam_achievement_tracker/services/utils/app_route.dart';
+import 'package:steam_achievement_tracker/services/utils/database.dart';
+import 'package:steam_achievement_tracker/services/utils/preference_utils.dart';
 
 class LoginController extends GetxController {
   final Rx<String> steamID = ''.obs;
+  final RxBool isLoggingIn = false.obs;
 
   /// Logs the user into their Steam account.
   void login(BuildContext context) async {
+    if (isLoggingIn.value) {
+      return;
+    }
+    isLoggingIn.value = true;
     try {
       // Send user to steam login page and wait until they return with their steamID
       var temp = await Navigator.of(context).push(
-        MaterialPageRoute(
+        AppRoute.fadeSlide(
           builder: (context) => const SteamLogin(),
         ),
       );
@@ -22,16 +30,26 @@ class LoginController extends GetxController {
         return;
       }
       steamID.value = temp;
+      await PreferenceUtils.setLastSteamId(steamID.value);
       // Now with a steam id, we can send them to the home screen
-      Navigator.of(context).push(
-        MaterialPageRoute(
+      Navigator.of(context).pushReplacement(
+        AppRoute.fadeSlide(
           builder: (context) => HomeScreen(
             steamID: steamID.value,
           ),
         ),
       );
     } catch (e) {
-      rethrow;
+      final message = e is AppNetworkException
+          ? e.message
+          : 'Steam sign-in failed. Please try again.';
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } finally {
+      isLoggingIn.value = false;
     }
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 import 'package:steam_login/steam_login.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:steam_achievement_tracker/services/utils/colors.dart';
 
 class SteamLogin extends StatefulWidget {
   const SteamLogin({super.key});
@@ -21,6 +22,7 @@ class _SteamLoginState extends State<SteamLogin> {
     final openId = OpenId.raw('https://steamer', 'https://steamer/', {});
     _webViewController =
         WebViewController()
+          ..setBackgroundColor(KColors.backgroundColor)
           ..setJavaScriptMode(JavaScriptMode.unrestricted)
           ..setNavigationDelegate(
             NavigationDelegate(
@@ -40,6 +42,7 @@ class _SteamLoginState extends State<SteamLogin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: KColors.backgroundColor,
       appBar: myAppBar(title: 'STEAMER'),
       body: WebViewWidget(controller: _webViewController),
     );

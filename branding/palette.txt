@@ -1,0 +1,8 @@
+Shell black: #0E141C
+Deep navy: #11202E
+Panel blue: #20384E
+Steel line: #27455F
+Ice cyan: #78D1FF
+Action blue: #318FE9
+Primary text: #EAF6FF
+Secondary text: #A8BECE

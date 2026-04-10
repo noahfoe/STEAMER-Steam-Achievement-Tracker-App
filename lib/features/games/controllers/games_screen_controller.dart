@@ -46,8 +46,12 @@ class GamesScreenController extends GetxController with StateMixin<void> {
       }
     } catch (e) {
       change(null, status: RxStatus.error(e.toString()));
-      rethrow;
+      return;
     }
     change(null, status: RxStatus.success());
+  }
+
+  Future<void> retry() async {
+    await init();
   }
 }

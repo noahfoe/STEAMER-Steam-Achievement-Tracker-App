@@ -62,4 +62,24 @@ class PreferenceUtils {
   static Future<void> setPlayerSummary(UserSteamInformation value) async {
     await _prefsInstance!.setString('playerSummary', value.toJson());
   }
+
+  static String? getLastSteamId() {
+    return _prefsInstance!.getString('lastSteamId');
+  }
+
+  static Future<void> setLastSteamId(String value) async {
+    await _prefsInstance!.setString('lastSteamId', value);
+  }
+
+  static Future<void> clearCachedData() async {
+    await _prefsInstance!.remove('playerGamesList');
+    await _prefsInstance!.remove('steamLevel');
+    await _prefsInstance!.remove('gameDetails');
+    await _prefsInstance!.remove('playerSummary');
+  }
+
+  static Future<void> clearSessionData() async {
+    await clearCachedData();
+    await _prefsInstance!.remove('lastSteamId');
+  }
 }

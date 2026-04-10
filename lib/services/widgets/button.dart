@@ -26,24 +26,28 @@ class Button extends StatelessWidget {
   }) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: padding ??
-            const EdgeInsets.symmetric(
-              vertical: 10,
-              horizontal: 40,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isDisabled ? null : onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Ink(
+          padding: padding ??
+              const EdgeInsets.symmetric(
+                vertical: 10,
+                horizontal: 40,
+              ),
+          decoration: BoxDecoration(
+            color: isDisabled ? KColors.darkButtonColor : KColors.buttonColor,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: KColors.activeTextColor,
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
             ),
-        decoration: BoxDecoration(
-          color: isDisabled ? KColors.darkButtonColor : KColors.buttonColor,
-          borderRadius: BorderRadius.circular(5),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: KColors.activeTextColor,
-            fontSize: 20,
-            fontWeight: FontWeight.w500,
           ),
         ),
       ),

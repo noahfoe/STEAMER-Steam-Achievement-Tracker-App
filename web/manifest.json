@@ -1,11 +1,11 @@
 {
-    "name": "steam_achievement_tracker",
-    "short_name": "steam_achievement_tracker",
+    "name": "STEAMER",
+    "short_name": "STEAMER",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Track your Steam library, achievements, and profile progress in one polished dashboard.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
