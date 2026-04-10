@@ -3,6 +3,7 @@
 This folder contains a lightweight branding starter pack for the app.
 
 Contents:
+
 - `brand-brief.md`: core brand direction
 - `palette.txt`: production color references
 - `app-icon.svg`: vector-ready launcher concept
@@ -16,6 +17,11 @@ Contents:
 - `cloudflare-worker-hardening.md`: backend hardening checklist
 
 Note:
+
 - The direction intentionally echoes the dark blue PC-gaming launcher aesthetic, but it does not reuse Valve logos, Steam glyphs, or proprietary artwork.
 - The icon is an original vector concept built from generic orbital forms and an achievement check motif, so it is safer for independent branding use.
 - The Android launcher icons in `android/app/src/main/res/mipmap-*` have been updated from this direction as well.
+
+Privacy Policy
+
+- https://steamer-privacy-site.pages.dev/

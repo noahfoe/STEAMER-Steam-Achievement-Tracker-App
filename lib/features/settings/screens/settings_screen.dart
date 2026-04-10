@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
+const _releaseVersion = '1.0.1';
+
 class SettingsScreen extends StatelessWidget {
   final Future<void> Function()? onSignOut;
   final Future<void> Function()? onRefreshLibrary;
@@ -16,7 +18,7 @@ class SettingsScreen extends StatelessWidget {
     showAboutDialog(
       context: context,
       applicationName: 'STEAMER',
-      applicationVersion: '1.0.0',
+      applicationVersion: _releaseVersion,
       applicationLegalese:
           'Steam achievement tracking companion app. Not affiliated with Valve.',
     );
@@ -39,7 +41,7 @@ class SettingsScreen extends StatelessWidget {
             children: [
               _BasicSettingButton(
                 title: "About",
-                subtitle: "Version 1.0.0",
+                subtitle: "Version $_releaseVersion",
                 icon: const Icon(
                   Icons.adb_outlined,
                   color: KColors.inactiveTextColor,
