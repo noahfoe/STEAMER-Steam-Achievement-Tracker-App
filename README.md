@@ -31,7 +31,7 @@ The app is configured to use this Cloudflare Worker base URL:
 
 `https://steam-tracker-api.noahfoley6.workers.dev`
 
-See [database.dart](/g:/Flutter%20Projects/steam_achievement_tracker/lib/services/utils/database.dart) for the current API wiring.
+See [database.dart](lib/services/utils/database.dart) for the current API wiring.
 
 ## Getting Started
 
@@ -52,12 +52,12 @@ flutter run
 
 ## Release Build
 
-Release signing support is already wired in [build.gradle](/g:/Flutter%20Projects/steam_achievement_tracker/android/app/build.gradle).
+Release signing support is already wired in [build.gradle](android/app/build.gradle).
 
 Before building a release bundle, make sure these exist:
 
-- [keystores/steamer-upload.jks](/g:/Flutter%20Projects/steam_achievement_tracker/keystores/steamer-upload.jks)
-- [android/key.properties](/g:/Flutter%20Projects/steam_achievement_tracker/android/key.properties)
+- [keystores/steamer-upload.jks](keystores/steamer-upload.jks)
+- [android/key.properties](android/key.properties)
 
 Build the Play Store bundle:
 
@@ -81,33 +81,25 @@ Output:
 
 ## Branding And Store Assets
 
-Current release assets live in [branding](/g:/Flutter%20Projects/steam_achievement_tracker/branding), including:
+Current release assets live in [branding](branding/), including:
 
-- [play-store-icon-512.png](/g:/Flutter%20Projects/steam_achievement_tracker/branding/play-store-icon-512.png)
-- [feature-graphic.png](/g:/Flutter%20Projects/steam_achievement_tracker/branding/feature-graphic.png)
-- [play-store-listing.md](/g:/Flutter%20Projects/steam_achievement_tracker/branding/play-store-listing.md)
-- [privacy-policy.html](/g:/Flutter%20Projects/steam_achievement_tracker/branding/privacy-policy.html)
-- [release-prep.md](/g:/Flutter%20Projects/steam_achievement_tracker/branding/release-prep.md)
+- [play-store-icon-512.png](branding/play-store-icon-512.png)
+- [feature-graphic.png](branding/feature-graphic.png)
+- [play-store-listing.md](branding/play-store-listing.md)
+- [privacy-policy.html](branding/privacy-site/index.html)
+- [release-prep.md](branding/release-prep.md)
 
 ## Play Store Notes
 
-Current Android app id:
+Android app id:
 
 `com.thepetrichor.steamer`
 
 Recommended first production version:
 
-`1.0.0+1`
+`1.0.1+2`
 
-Release checklist summary:
-
-- finish privacy policy hosting
-- add support email in Play Console
-- upload screenshots
-- complete content rating and data safety forms
-- upload signed `.aab`
-
-For more detail, see [release-prep.md](/g:/Flutter%20Projects/steam_achievement_tracker/branding/release-prep.md).
+For more detail, see [release-prep.md](branding/release-prep.md).
 
 ## Important Notes
 
@@ -123,4 +115,8 @@ If you update the Worker API:
 - prefer readable JSON errors
 - consider aggregated endpoints for home-screen performance
 
-Backend hardening notes are in [cloudflare-worker-hardening.md](/g:/Flutter%20Projects/steam_achievement_tracker/branding/cloudflare-worker-hardening.md).
+Backend hardening notes are in [cloudflare-worker-hardening.md](branding/cloudflare-worker-hardening.md).
+
+## Privacy Policy
+
+https://steamer-privacy-site.pages.dev/

@@ -1,16 +1,15 @@
 # STEAMER Privacy Policy Draft
 
-Effective date:
-[REQUIRED: add date before publishing]
+Effective date: 4/9/26
 
-Contact:
-[REQUIRED: add support email]
+Contact: noahfoley6@gmail.com
 
 STEAMER respects your privacy. This app is designed to display publicly available Steam profile, library, and achievement data in a mobile-friendly dashboard.
 
 ## What data the app uses
 
 STEAMER may process:
+
 - your public Steam ID
 - your public Steam profile data
 - your owned games list
@@ -19,6 +18,7 @@ STEAMER may process:
 ## How data is used
 
 This data is used only to:
+
 - load your Steam profile
 - show your library and achievement progress
 - cache data locally on your device for faster loading
@@ -28,6 +28,7 @@ This data is used only to:
 The app stores cached Steam profile, game, and achievement data locally on your device using app preferences.
 
 The app does not ask for or store:
+
 - your Steam password
 - payment information
 - private messages
@@ -41,6 +42,7 @@ STEAMER uses a Cloudflare Worker as a lightweight backend proxy for Steam Web AP
 STEAMER does not sell your personal information.
 
 Data may be processed by service providers required to operate the app, such as:
+
 - Cloudflare, for backend request handling
 - Valve/Steam, for public profile and achievement data
 
