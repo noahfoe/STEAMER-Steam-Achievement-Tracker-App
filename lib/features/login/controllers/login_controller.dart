@@ -6,6 +6,7 @@ import 'package:steam_achievement_tracker/features/home/screens/home_screen.dart
 import 'package:steam_achievement_tracker/features/login/screens/steam_login.dart';
 import 'package:steam_achievement_tracker/services/utils/app_route.dart';
 import 'package:steam_achievement_tracker/services/utils/database.dart';
+import 'package:steam_achievement_tracker/services/utils/demo_mode.dart';
 import 'package:steam_achievement_tracker/services/utils/preference_utils.dart';
 
 class LoginController extends GetxController {
@@ -51,5 +52,27 @@ class LoginController extends GetxController {
     } finally {
       isLoggingIn.value = false;
     }
+  }
+
+  Future<void> loginWithTestMode(BuildContext context) async {
+    if (isLoggingIn.value) {
+      return;
+    }
+
+    steamID.value = DemoMode.steamId;
+    await PreferenceUtils.clearCachedData();
+    await PreferenceUtils.setLastSteamId(DemoMode.steamId);
+
+    if (!context.mounted) {
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(
+      AppRoute.fadeSlide(
+        builder: (context) => const HomeScreen(
+          steamID: DemoMode.steamId,
+        ),
+      ),
+    );
   }
 }

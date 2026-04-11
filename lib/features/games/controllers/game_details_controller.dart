@@ -43,7 +43,10 @@ class GameDetailsScreenController extends GetxController with StateMixin<void> {
       }
 
       achievementsAndGlobalPercentages.value =
-          await _database.getGlobalAchievementPercentagesForApp(appID: appID);
+          await _database.getGlobalAchievementPercentagesForApp(
+        appID: appID,
+        steamID: steamID,
+      );
     } catch (e) {
       change(null, status: RxStatus.error(e.toString()));
     }
