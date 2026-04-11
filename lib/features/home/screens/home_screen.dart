@@ -9,6 +9,7 @@ import 'package:steam_achievement_tracker/features/settings/screens/settings_scr
 import 'package:steam_achievement_tracker/services/models/user/user_steam_information.dart';
 import 'package:steam_achievement_tracker/services/utils/app_route.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
+import 'package:steam_achievement_tracker/services/utils/demo_mode.dart';
 import 'package:steam_achievement_tracker/services/utils/extensions/int_extensions.dart';
 import 'package:steam_achievement_tracker/services/utils/extensions/string_extensions.dart';
 import 'package:steam_achievement_tracker/services/widgets/async_state_panel.dart';
@@ -105,6 +106,8 @@ class HomeScreen extends StatelessWidget {
                                 ),
                               );
                             },
+                            isDemoMode:
+                                DemoMode.isDemoSteamId(controller.steamID),
                           );
                         },
                       ),
@@ -286,6 +289,7 @@ class _HeroPanel extends StatelessWidget {
   final String totalHoursPlayed;
   final VoidCallback onViewLibrary;
   final VoidCallback onViewAchievements;
+  final bool isDemoMode;
 
   const _HeroPanel({
     required this.summary,
@@ -295,6 +299,7 @@ class _HeroPanel extends StatelessWidget {
     required this.totalHoursPlayed,
     required this.onViewLibrary,
     required this.onViewAchievements,
+    required this.isDemoMode,
   });
 
   @override
@@ -383,6 +388,41 @@ class _HeroPanel extends StatelessWidget {
               height: 1.35,
             ),
           ),
+          if (isDemoMode) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: KColors.menuHighlightColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: KColors.menuHighlightColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.science_outlined,
+                    color: KColors.menuHighlightColor,
+                    size: 18,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Closed testing mode is active. This account uses sample data so testers can explore the full app without Steam sign-in.',
+                      style: TextStyle(
+                        color: KColors.activeTextColor,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Wrap(
             spacing: 12,

@@ -10,6 +10,7 @@ import 'package:steam_achievement_tracker/services/models/games/game.dart';
 import 'package:steam_achievement_tracker/services/models/games/game_details.dart';
 import 'package:steam_achievement_tracker/services/models/games/global_achievement_percentages.dart';
 import 'package:steam_achievement_tracker/services/models/user/user_steam_information.dart';
+import 'package:steam_achievement_tracker/services/utils/demo_mode.dart';
 
 class Database extends GetxController {
   static Database instance = Get.put(_instance);
@@ -75,6 +76,10 @@ class Database extends GetxController {
   /// Gets the user's basic Steam information from the Steam API.
   Future<UserSteamInformation> getPlayerSummary(
       {required String steamID}) async {
+    if (DemoMode.isDemoSteamId(steamID)) {
+      return DemoMode.playerSummary;
+    }
+
     final response = await _getJson(
       '/player-summary',
       {'steamId': steamID},
@@ -82,7 +87,9 @@ class Database extends GetxController {
 
     final players =
         (response['response'] as Map<String, dynamic>?)?['players'] as List?;
-    if (players == null || players.isEmpty || players.first is! Map<String, dynamic>) {
+    if (players == null ||
+        players.isEmpty ||
+        players.first is! Map<String, dynamic>) {
       throw const AppNetworkException(
         'We could not find a public Steam profile for this account.',
       );
@@ -92,14 +99,20 @@ class Database extends GetxController {
   }
 
   Future<RxList<GlobalAchievementPercentages>>
-      getGlobalAchievementPercentagesForApp({required int appID}) async {
+      getGlobalAchievementPercentagesForApp({
+    required int appID,
+    String? steamID,
+  }) async {
+    if (steamID != null && DemoMode.isDemoSteamId(steamID)) {
+      return DemoMode.percentagesForApp(appID).obs;
+    }
+
     final body = await _getJson(
       '/global-achievement-percentages',
       {'appId': '$appID'},
     );
-    final achievements =
-        (body['achievementpercentages'] as Map<String, dynamic>?)?['achievements']
-            as List?;
+    final achievements = (body['achievementpercentages']
+        as Map<String, dynamic>?)?['achievements'] as List?;
     if (achievements == null || achievements.isEmpty) {
       return <GlobalAchievementPercentages>[].obs;
     }
@@ -115,12 +128,17 @@ class Database extends GetxController {
 
   /// Gets the user's games list from the Steam API.
   Future<RxList<Game>> getPlayerGamesList({required String steamID}) async {
+    if (DemoMode.isDemoSteamId(steamID)) {
+      return DemoMode.games.obs;
+    }
+
     final body = await _getJson(
       '/owned-games',
       {'steamId': steamID},
     );
 
-    final games = (body['response'] as Map<String, dynamic>?)?['games'] as List?;
+    final games =
+        (body['response'] as Map<String, dynamic>?)?['games'] as List?;
     if (games == null || games.isEmpty) {
       return <Game>[].obs;
     }
@@ -139,6 +157,21 @@ class Database extends GetxController {
     List<Game>? games,
     void Function(int completed, int total)? onProgress,
   }) async {
+    if (DemoMode.isDemoSteamId(steamID)) {
+      final demoGames = games ?? DemoMode.games;
+      final total = demoGames.length;
+      final details = <GameDetails>[];
+      for (int index = 0; index < total; index++) {
+        final game = demoGames[index];
+        final detail = DemoMode.detailsForApp(game.appId);
+        if ((detail.allAchievements ?? const []).isNotEmpty) {
+          details.add(detail.copyWith(gameName: game.name));
+        }
+        onProgress?.call(index + 1, total);
+      }
+      return details;
+    }
+
     final List<Game> achievementGames =
         (games ?? await getPlayerGamesList(steamID: steamID))
             .toList(growable: false);
@@ -183,6 +216,10 @@ class Database extends GetxController {
   /// Which is then added to the GameDetails object.
   Future<GameDetails> getGameDetails(
       {required String steamID, required int appID}) async {
+    if (DemoMode.isDemoSteamId(steamID)) {
+      return DemoMode.detailsForApp(appID);
+    }
+
     final body = await _getJson(
       '/game-schema',
       {
@@ -215,6 +252,10 @@ class Database extends GetxController {
     required String steamID,
     required int appID,
   }) async {
+    if (DemoMode.isDemoSteamId(steamID)) {
+      return DemoMode.detailsForApp(appID).obs;
+    }
+
     final response = await _getJson(
       '/player-achievements',
       {
@@ -223,14 +264,15 @@ class Database extends GetxController {
       },
     );
 
-    final body =
-        (response['playerstats'] as Map<String, dynamic>?)?['achievements'] as List?;
+    final body = (response['playerstats']
+        as Map<String, dynamic>?)?['achievements'] as List?;
 
     if (body == null || body.isEmpty) return null;
 
     final achievementLookup = <String, dynamic>{
       for (final achievement in body)
-        if (achievement is Map<String, dynamic> && achievement['apiname'] != null)
+        if (achievement is Map<String, dynamic> &&
+            achievement['apiname'] != null)
           achievement['apiname'] as String: achievement,
     };
 
@@ -265,6 +307,10 @@ class Database extends GetxController {
   }
 
   Future<int> getSteamLevel({required String steamID}) async {
+    if (DemoMode.isDemoSteamId(steamID)) {
+      return DemoMode.steamLevel;
+    }
+
     final value = await _getJson(
       '/steam-level',
       {'steamId': steamID},

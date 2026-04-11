@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
-const _releaseVersion = '1.0.1';
+const _releaseVersion = '1.0.2';
 
 class SettingsScreen extends StatelessWidget {
   final Future<void> Function()? onSignOut;
