@@ -3,7 +3,7 @@ import 'package:steam_achievement_tracker/services/utils/app_update_service.dart
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
-const _releaseVersion = '1.0.3';
+const _releaseVersion = '1.1.0';
 
 class SettingsScreen extends StatelessWidget {
   final Future<void> Function()? onSignOut;
@@ -161,7 +161,7 @@ class _SettingsHero extends StatelessWidget {
                 ),
                 SizedBox(width: 8),
                 Text(
-                  'Current version 1.0.3',
+                  'Current version 1.1.0',
                   style: TextStyle(
                     color: KColors.activeTextColor,
                     fontSize: 13,
