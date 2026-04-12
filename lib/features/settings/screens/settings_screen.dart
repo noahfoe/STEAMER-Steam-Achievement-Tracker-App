@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:steam_achievement_tracker/services/utils/app_update_service.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
-const _releaseVersion = '1.0.2';
+const _releaseVersion = '1.0.3';
 
 class SettingsScreen extends StatelessWidget {
   final Future<void> Function()? onSignOut;
@@ -24,19 +25,25 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _checkForUpdates(BuildContext context) async {
+    await AppUpdateService.checkForUpdates(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: myAppBar(title: "Settings"),
       backgroundColor: KColors.backgroundColor,
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
         children: [
+          const _SettingsHero(),
+          const SizedBox(height: 22),
           _SettingsSection(
-            title: const Text(
-              "General",
-              style: TextStyle(
-                color: KColors.buttonColor,
-              ),
+            title: const _SectionLabel(
+              title: 'General',
+              subtitle:
+                  'Version info, update visibility, and app identity details.',
             ),
             children: [
               _BasicSettingButton(
@@ -48,15 +55,24 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 onTap: () => _showAboutDialog(context),
               ),
+              _BasicSettingButton(
+                title: "Check for Updates",
+                subtitle:
+                    "Confirm your installed version and look for newer Play Store builds.",
+                icon: const Icon(
+                  Icons.system_update_alt_rounded,
+                  color: KColors.inactiveTextColor,
+                ),
+                onTap: () => _checkForUpdates(context),
+              ),
             ],
           ),
-          const _Divider(),
+          const SizedBox(height: 18),
           _SettingsSection(
-            title: const Text(
-              "Account",
-              style: TextStyle(
-                color: KColors.buttonColor,
-              ),
+            title: const _SectionLabel(
+              title: 'Account',
+              subtitle:
+                  'Manage your session and manually refresh Steam data when needed.',
             ),
             children: [
               _BasicSettingButton(
@@ -76,12 +92,85 @@ class SettingsScreen extends StatelessWidget {
                   Icons.refresh,
                   color: KColors.inactiveTextColor,
                 ),
-                onTap:
-                    onRefreshLibrary == null ? null : () => onRefreshLibrary!.call(),
+                onTap: onRefreshLibrary == null
+                    ? null
+                    : () => onRefreshLibrary!.call(),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsHero extends StatelessWidget {
+  const _SettingsHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xff20374b),
+            Color(0xff162231),
+            KColors.primaryColor,
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Settings',
+            style: TextStyle(
+              color: KColors.activeTextColor,
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              height: 1.05,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Keep account actions, version info, and release polish in one place.',
+            style: TextStyle(
+              color: KColors.activeTextColor.withValues(alpha: 0.82),
+              fontSize: 14,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.verified_outlined,
+                  color: KColors.menuHighlightColor,
+                  size: 16,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Current version 1.0.3',
+                  style: TextStyle(
+                    color: KColors.activeTextColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -99,34 +188,57 @@ class _SettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.only(left: 20.0),
-          child: title,
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: KColors.primaryColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: KColors.lightBackgroundColor.withValues(alpha: 0.55),
         ),
-        const SizedBox(height: 10),
-        ...children,
-      ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          title,
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
     );
   }
 }
 
-class _Divider extends StatelessWidget {
-  const _Divider({Key? key}) : super(key: key);
+class _SectionLabel extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SectionLabel({
+    required this.title,
+    required this.subtitle,
+  });
+
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(height: 5),
-        Divider(
-          thickness: 1,
-          height: 1,
-          indent: 25,
-          endIndent: 25,
-          color: KColors.inactiveTextColor,
+        Text(
+          title,
+          style: const TextStyle(
+            color: KColors.activeTextColor,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: const TextStyle(
+            color: KColors.inactiveTextColor,
+            fontSize: 14,
+            height: 1.35,
+          ),
         ),
       ],
     );
@@ -138,6 +250,7 @@ class _BasicSettingButton extends StatelessWidget {
   final String subtitle;
   final Icon icon;
   final Function()? onTap;
+
   const _BasicSettingButton({
     Key? key,
     required this.title,
@@ -145,44 +258,55 @@ class _BasicSettingButton extends StatelessWidget {
     required this.subtitle,
     this.onTap,
   }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
           width: double.infinity,
-          color: KColors.backgroundColor,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 20.0),
-            child: Row(
-              children: [
-                icon,
-                const SizedBox(width: 20),
-                Column(
+          decoration: BoxDecoration(
+            color: KColors.backgroundColor,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              icon,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
                       style: const TextStyle(
                         color: KColors.activeTextColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.7,
-                      child: Text(
-                        subtitle,
-                        style: const TextStyle(
-                          color: KColors.inactiveTextColor,
-                        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: KColors.inactiveTextColor,
+                        height: 1.35,
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: KColors.inactiveTextColor,
+              ),
+            ],
           ),
         ),
       ),

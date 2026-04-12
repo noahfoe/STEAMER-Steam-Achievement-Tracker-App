@@ -100,6 +100,7 @@ class HomeScreen extends StatelessWidget {
                               Navigator.of(context).push(
                                 AppRoute.fadeSlide(
                                   builder: (context) => AchievementsScreen(
+                                    steamID: controller.steamID,
                                     gameDetails: controller.gameDetails,
                                     playerGames: controller.playerGamesList,
                                   ),
@@ -1026,6 +1027,7 @@ class _Drawer extends GetView<HomeScreenController> {
               Navigator.of(context).push(
                 AppRoute.fadeSlide(
                   builder: (context) => AchievementsScreen(
+                    steamID: controller.steamID,
                     gameDetails: controller.gameDetails,
                     playerGames: controller.playerGamesList,
                   ),

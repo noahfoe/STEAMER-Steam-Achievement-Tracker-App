@@ -49,12 +49,14 @@ class GameDetailsScreen extends StatelessWidget {
               actionLabel: 'Retry',
               onAction: controller.retry,
             ),
-            (state) => Column(
+            (state) => ListView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
               children: [
-                // Header Image
-                Image.network(
-                  'https://steamcdn-a.akamaihd.net/steam/apps/${game.appId}/header.jpg',
+                _GameHeroCard(
+                  game: game,
+                  gameDetails: controller.gameDetails,
                 ),
+                const SizedBox(height: 18),
                 _AchievementDropdowns(game: game),
               ],
             ),
@@ -74,64 +76,196 @@ class _AchievementDropdowns extends GetView<GameDetailsScreenController> {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: ListView(
+    if (controller.gameDetails.allAchievements!.isEmpty) {
+      return _NoAchievementsState(
+        gameDetails: controller.gameDetails,
+        game: game,
+      );
+    }
+
+    return Column(
+      children: [
+        Obx(
+          () => ExpandableGameTile(
+            isTotal: true,
+            gameName: game.name,
+            achievements: controller.gameDetails.allAchievements ?? [],
+            globalAchievementPercentages:
+                controller.achievementsAndGlobalPercentages.value,
+          ),
+        ),
+        if (controller.gameDetails.unlockedAchievements!.isNotEmpty)
+          Obx(
+            () => ExpandableGameTile(
+              gameName: "Unlocked Achievements",
+              achievements: controller.gameDetails.unlockedAchievements ?? [],
+              globalAchievementPercentages:
+                  controller.achievementsAndGlobalPercentages.value,
+            ),
+          ),
+        if (controller.gameDetails.lockedAchievements!.isNotEmpty)
+          Obx(
+            () => ExpandableGameTile(
+              gameName: "Locked Achievements",
+              achievements: controller.gameDetails.lockedAchievements ?? [],
+              globalAchievementPercentages:
+                  controller.achievementsAndGlobalPercentages.value,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _GameHeroCard extends StatelessWidget {
+  final Game game;
+  final GameDetails gameDetails;
+
+  const _GameHeroCard({
+    required this.game,
+    required this.gameDetails,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final total = (gameDetails.allAchievements ?? const []).length;
+    final unlocked = (gameDetails.unlockedAchievements ?? const []).length;
+    final progress = total == 0 ? 0.0 : unlocked / total;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: KColors.primaryColor,
+        border: Border.all(
+          color: KColors.lightBackgroundColor.withValues(alpha: 0.55),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (controller.gameDetails.allAchievements!.isNotEmpty)
-            Column(
+          Stack(
+            children: [
+              Image.network(
+                'https://steamcdn-a.akamaihd.net/steam/apps/${game.appId}/header.jpg',
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.1),
+                        Colors.black.withValues(alpha: 0.55),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 18,
+                right: 18,
+                bottom: 18,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      game.name,
+                      style: const TextStyle(
+                        color: KColors.activeTextColor,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        height: 1.05,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _GameHeroChip(
+                          icon: Icons.emoji_events_outlined,
+                          label: '$unlocked/$total unlocked',
+                        ),
+                        _GameHeroChip(
+                          icon: Icons.schedule_rounded,
+                          label: '${game.playtimeForever ?? 0} minutes played',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // All Achievements
-                Visibility(
-                  visible: controller.gameDetails.allAchievements!.isNotEmpty,
-                  child: Obx(
-                    () => ExpandableGameTile(
-                      isTotal: true,
-                      gameName: game.name,
-                      achievements:
-                          controller.gameDetails.allAchievements ?? [],
-                      globalAchievementPercentages:
-                          controller.achievementsAndGlobalPercentages.value,
-                    ),
+                const Text(
+                  'Achievement Progress',
+                  style: TextStyle(
+                    color: KColors.activeTextColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-
-                // Unlocked Achievements
-                Visibility(
-                  visible:
-                      controller.gameDetails.unlockedAchievements!.isNotEmpty,
-                  child: Obx(
-                    () => ExpandableGameTile(
-                      gameName: "Unlocked Achievements",
-                      achievements:
-                          controller.gameDetails.unlockedAchievements ?? [],
-                      globalAchievementPercentages:
-                          controller.achievementsAndGlobalPercentages.value,
-                    ),
-                  ),
-                ),
-
-                // Locked Achievements
-                Visibility(
-                  visible:
-                      controller.gameDetails.lockedAchievements!.isNotEmpty,
-                  child: Obx(
-                    () => ExpandableGameTile(
-                      gameName: "Locked Achievements",
-                      achievements:
-                          controller.gameDetails.lockedAchievements ?? [],
-                      globalAchievementPercentages:
-                          controller.achievementsAndGlobalPercentages.value,
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    minHeight: 8,
+                    value: progress,
+                    backgroundColor: KColors.backgroundColor,
+                    valueColor: const AlwaysStoppedAnimation(
+                      KColors.menuHighlightColor,
                     ),
                   ),
                 ),
               ],
-            )
-          else
-            // No Achievements State
-            _NoAchievementsState(
-              gameDetails: controller.gameDetails,
-              game: game,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GameHeroChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _GameHeroChip({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: KColors.menuHighlightColor),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: KColors.activeTextColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -150,36 +284,51 @@ class _NoAchievementsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 50),
-        Center(
-          child: Text(
-            "Sorry, but ${game.name} does not have any Steam achievements",
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: KColors.primaryColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: KColors.lightBackgroundColor.withValues(alpha: 0.55),
+        ),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.sentiment_neutral_rounded,
+            color: KColors.inactiveTextColor,
+            size: 28,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "${game.name} does not currently expose Steam achievements for this profile.",
             style: const TextStyle(
               color: KColors.activeTextColor,
-              fontSize: 20,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              height: 1.25,
             ),
             textAlign: TextAlign.center,
           ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          "Total Playtime: ${game.playtimeForever}",
-          style: const TextStyle(
-            color: KColors.activeTextColor,
+          const SizedBox(height: 14),
+          Text(
+            "Total playtime: ${game.playtimeForever} minutes",
+            style: const TextStyle(
+              color: KColors.inactiveTextColor,
+              fontSize: 14,
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        // Last 2 weeks playtime
-        Text(
-          "Last 2 weeks playtime: ${game.playtime2Weeks}",
-          style: const TextStyle(
-            color: KColors.activeTextColor,
+          const SizedBox(height: 6),
+          Text(
+            "Last 2 weeks: ${game.playtime2Weeks} minutes",
+            style: const TextStyle(
+              color: KColors.inactiveTextColor,
+              fontSize: 14,
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-      ],
+        ],
+      ),
     );
   }
 }

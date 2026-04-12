@@ -16,39 +16,56 @@ class GameDetailsListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      tileColor: KColors.backgroundColor,
-      leading: achievement.achieved == 1
-          ? NetworkIconImage(imageUrl: achievement.icon)
-          : NetworkIconImage(imageUrl: achievement.iconGray),
-      title: Text(
-        achievement.displayName,
-        style: const TextStyle(
-          color: KColors.activeTextColor,
-          fontWeight: FontWeight.w500,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: KColors.backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        leading: achievement.achieved == 1
+            ? NetworkIconImage(imageUrl: achievement.icon)
+            : NetworkIconImage(imageUrl: achievement.iconGray),
+        title: Text(
+          achievement.displayName,
+          style: const TextStyle(
+            color: KColors.activeTextColor,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              achievement.description ?? "No Description",
+              style: const TextStyle(
+                color: KColors.inactiveTextColor,
+                fontWeight: FontWeight.w400,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "$_getGlobalPercentageForThisAchievement% of all players",
+              style: const TextStyle(
+                color: KColors.inactiveTextColor,
+                fontWeight: FontWeight.w500,
+              ),
+            )
+          ],
+        ),
+        dense: true,
+        trailing: Icon(
+          achievement.achieved == 1
+              ? Icons.check_circle_rounded
+              : Icons.lock_outline_rounded,
+          color: achievement.achieved == 1
+              ? const Color(0xff7dd3a3)
+              : KColors.inactiveTextColor,
         ),
       ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            achievement.description ?? "No Description",
-            style: const TextStyle(
-              color: KColors.inactiveTextColor,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            "$_getGlobalPercentageForThisAchievement% of all players",
-            style: const TextStyle(
-              color: KColors.inactiveTextColor,
-              fontWeight: FontWeight.w400,
-            ),
-          )
-        ],
-      ),
-      dense: true,
     );
   }
 
@@ -57,11 +74,14 @@ class GameDetailsListTile extends StatelessWidget {
       return "0";
     }
 
-    // Find the global percentage for this achievement without using .firstWhere
-    final percentage = globalAchievementPercentages
+    final match = globalAchievementPercentages
         .where((element) => element.name == achievement.name)
-        .first;
+        .toList();
 
-    return percentage.percent.toStringAsFixed(2);
+    if (match.isEmpty) {
+      return "0";
+    }
+
+    return match.first.percent.toStringAsFixed(2);
   }
 }
