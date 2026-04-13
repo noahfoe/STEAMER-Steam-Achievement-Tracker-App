@@ -19,7 +19,7 @@ It also keeps the older per-route Steam proxy endpoints:
 - Secret: `STEAM_API_KEY`
 - KV namespace binding: `STEAMER_CACHE`
 
-## Recommended cache keys
+## Cache keys
 
 - `player-summary:<steamId>`
 - `steam-level:<steamId>`
