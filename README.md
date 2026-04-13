@@ -97,7 +97,7 @@ Android app id:
 
 Recommended first production version:
 
-`1.0.1+2`
+`1.1.0+6`
 
 For more detail, see [release-prep.md](branding/release-prep.md).
 
