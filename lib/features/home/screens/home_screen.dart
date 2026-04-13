@@ -6,6 +6,7 @@ import 'package:steam_achievement_tracker/features/home/controllers/home_screen_
 import 'package:steam_achievement_tracker/features/profile/screens/achievements_screen.dart';
 import 'package:steam_achievement_tracker/features/profile/screens/profile_screen.dart';
 import 'package:steam_achievement_tracker/features/settings/screens/settings_screen.dart';
+import 'package:steam_achievement_tracker/services/models/games/dashboard_summary.dart';
 import 'package:steam_achievement_tracker/services/models/user/user_steam_information.dart';
 import 'package:steam_achievement_tracker/services/utils/app_route.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
@@ -26,14 +27,51 @@ class HomeScreen extends StatelessWidget {
   });
 
   String _achievementStatValue(
-    HomeScreenController controller,
     String Function() resolver,
   ) {
-    if (controller.gameDetails.isEmpty &&
-        controller.isLoadingAchievementStats.value) {
-      return '--';
-    }
     return resolver();
+  }
+
+  String _summaryAchievementValue(
+    HomeScreenController controller,
+    DashboardSummary summary,
+    int summaryValue,
+    int Function() fallback,
+  ) {
+    if (!summary.isEmpty) {
+      return summaryValue.toString().toNumberFormat();
+    }
+    return _achievementStatValue(() => fallback().toString().toNumberFormat());
+  }
+
+  String _summaryTotalGames(
+    HomeScreenController controller,
+    DashboardSummary summary,
+  ) {
+    if (!summary.isEmpty) {
+      return summary.totalGames.toString().toNumberFormat();
+    }
+    return controller.playerGamesList.length.toString().toNumberFormat();
+  }
+
+  String _summaryTotalHours(
+    HomeScreenController controller,
+    DashboardSummary summary,
+  ) {
+    if (!summary.isEmpty) {
+      return summary.totalHoursPlayed.minutesToHours().toString().toNumberFormat();
+    }
+
+    if (controller.playerGamesList.isNotEmpty) {
+      return controller.playerGamesList
+          .map((e) => e.playtimeForever)
+          .reduce((value, element) => value! + element!)!
+          .minutesToHours()
+          .toString()
+          .toNumberFormat();
+    }
+
+    return '0';
   }
 
   @override
@@ -75,19 +113,15 @@ class HomeScreen extends StatelessWidget {
                     children: [
                       Obx(
                         () {
-                          final totalGames = controller.playerGamesList.length
-                              .toString()
-                              .toNumberFormat();
-                          final totalHoursPlayed = controller
-                                  .playerGamesList.isNotEmpty
-                              ? controller.playerGamesList
-                                  .map((e) => e.playtimeForever)
-                                  .reduce(
-                                      (value, element) => value! + element!)!
-                                  .minutesToHours()
-                                  .toString()
-                                  .toNumberFormat()
-                              : '0';
+                          final summary = controller.dashboardSummary.value;
+                          final totalGames = _summaryTotalGames(
+                            controller,
+                            summary,
+                          );
+                          final totalHoursPlayed = _summaryTotalHours(
+                            controller,
+                            summary,
+                          );
                           return _HeroPanel(
                             summary: controller.playerSummary.value,
                             steamLevel: controller.steamLevel.value,
@@ -101,7 +135,6 @@ class HomeScreen extends StatelessWidget {
                                 AppRoute.fadeSlide(
                                   builder: (context) => AchievementsScreen(
                                     steamID: controller.steamID,
-                                    gameDetails: controller.gameDetails,
                                     playerGames: controller.playerGamesList,
                                   ),
                                 ),
@@ -113,8 +146,6 @@ class HomeScreen extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 18),
-                      const _AchievementSyncBanner(),
-                      const SizedBox(height: 22),
                       const _SectionLabel(
                         title: 'Dashboard',
                         subtitle:
@@ -123,48 +154,42 @@ class HomeScreen extends StatelessWidget {
                       const SizedBox(height: 14),
                       Obx(
                         () {
-                          final totalAchievements = _achievementStatValue(
+                          final summary = controller.dashboardSummary.value;
+                          final totalAchievements = _summaryAchievementValue(
                             controller,
+                            summary,
+                            summary.totalAchievements,
                             () => controller.gameDetails
                                 .map((e) => e.allAchievements ?? const [])
                                 .expand((e) => e)
-                                .length
-                                .toString()
-                                .toNumberFormat(),
+                                .length,
                           );
-                          final unlockedAchievements = _achievementStatValue(
+                          final unlockedAchievements = _summaryAchievementValue(
                             controller,
+                            summary,
+                            summary.unlockedAchievements,
                             () => controller.gameDetails
                                 .map((e) => e.unlockedAchievements ?? const [])
                                 .expand((e) => e)
-                                .length
-                                .toString()
-                                .toNumberFormat(),
+                                .length,
                           );
-                          final lockedAchievements = _achievementStatValue(
+                          final lockedAchievements = _summaryAchievementValue(
                             controller,
+                            summary,
+                            summary.lockedAchievements,
                             () => controller.gameDetails
                                 .map((e) => e.lockedAchievements ?? const [])
                                 .expand((e) => e)
-                                .length
-                                .toString()
-                                .toNumberFormat(),
+                                .length,
                           );
-                          final totalGames = controller.playerGamesList.length
-                              .toString()
-                              .toNumberFormat();
-                          final totalHoursPlayed = controller
-                                  .playerGamesList.isNotEmpty
-                              ? controller.playerGamesList
-                                  .map((e) => e.playtimeForever)
-                                  .reduce(
-                                      (value, element) => value! + element!)!
-                                  .minutesToHours()
-                                  .toString()
-                                  .toNumberFormat()
-                              : '0';
-                          final perfectedGames = _achievementStatValue(
+                          final totalGames =
+                              _summaryTotalGames(controller, summary);
+                          final totalHoursPlayed =
+                              _summaryTotalHours(controller, summary);
+                          final perfectedGames = _summaryAchievementValue(
                             controller,
+                            summary,
+                            summary.perfectedGames,
                             () => controller.gameDetails
                                 .where(
                                   (e) =>
@@ -173,9 +198,7 @@ class HomeScreen extends StatelessWidget {
                                       (e.lockedAchievements ?? const [])
                                           .isEmpty,
                                 )
-                                .length
-                                .toString()
-                                .toNumberFormat(),
+                                .length,
                           );
 
                           final statCards = [
@@ -252,8 +275,6 @@ class HomeScreen extends StatelessWidget {
                                 unlockedAchievements: unlockedAchievements,
                                 perfectedGames: perfectedGames,
                                 totalGames: totalGames,
-                                isSyncing:
-                                    controller.isLoadingAchievementStats.value,
                               ),
                             ],
                           );
@@ -608,14 +629,12 @@ class _ProgressHighlights extends StatelessWidget {
   final String unlockedAchievements;
   final String perfectedGames;
   final String totalGames;
-  final bool isSyncing;
 
   const _ProgressHighlights({
     required this.totalAchievements,
     required this.unlockedAchievements,
     required this.perfectedGames,
     required this.totalGames,
-    required this.isSyncing,
   });
 
   @override
@@ -641,11 +660,9 @@ class _ProgressHighlights extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            isSyncing
-                ? 'Achievement totals are still syncing in the background, so a few numbers may keep climbing.'
-                : 'Your latest profile snapshot is loaded and ready to browse.',
-            style: const TextStyle(
+          const Text(
+            'Your latest profile snapshot is loaded and ready to browse.',
+            style: TextStyle(
               color: KColors.inactiveTextColor,
               fontSize: 14,
               height: 1.35,
@@ -807,76 +824,6 @@ class _SecondaryActionButton extends StatelessWidget {
   }
 }
 
-class _AchievementSyncBanner extends GetView<HomeScreenController> {
-  const _AchievementSyncBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final isVisible = controller.isLoadingAchievementStats.value ||
-          controller.achievementSyncStatus.value == 'Achievement data synced';
-      if (!isVisible) {
-        return const SizedBox.shrink();
-      }
-
-      final total = controller.totalAchievementGameCount.value;
-      final loaded = controller.loadedAchievementGameCount.value;
-      final progress = total > 0 ? (loaded / total).clamp(0.0, 1.0) : null;
-
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: KColors.primaryColor,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: KColors.lightBackgroundColor),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  controller.isLoadingAchievementStats.value
-                      ? Icons.sync_rounded
-                      : Icons.check_circle_rounded,
-                  color: KColors.menuHighlightColor,
-                  size: 18,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    controller.isLoadingAchievementStats.value
-                        ? controller.achievementSyncStatus.value
-                        : 'Achievement data is up to date',
-                    style: const TextStyle(
-                      color: KColors.activeTextColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                minHeight: 8,
-                value:
-                    controller.isLoadingAchievementStats.value ? progress : 1,
-                backgroundColor: KColors.darkBackgroundColor,
-                valueColor:
-                    const AlwaysStoppedAnimation(KColors.menuHighlightColor),
-              ),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-}
-
 class DrawerTile extends StatelessWidget {
   final String text;
   final Icon icon;
@@ -1028,7 +975,6 @@ class _Drawer extends GetView<HomeScreenController> {
                 AppRoute.fadeSlide(
                   builder: (context) => AchievementsScreen(
                     steamID: controller.steamID,
-                    gameDetails: controller.gameDetails,
                     playerGames: controller.playerGamesList,
                   ),
                 ),

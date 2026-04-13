@@ -6,6 +6,8 @@ import 'dart:io';
 
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:steam_achievement_tracker/services/models/games/achievement_game_summary.dart';
+import 'package:steam_achievement_tracker/services/models/games/dashboard_summary.dart';
 import 'package:steam_achievement_tracker/services/models/games/game.dart';
 import 'package:steam_achievement_tracker/services/models/games/game_details.dart';
 import 'package:steam_achievement_tracker/services/models/games/global_achievement_percentages.dart';
@@ -150,6 +152,51 @@ class Database extends GetxController {
       }
     }
     return temp;
+  }
+
+  Future<DashboardSummary> getDashboardSummary({required String steamID}) async {
+    if (DemoMode.isDemoSteamId(steamID)) {
+      return DemoMode.dashboardSummary();
+    }
+
+    final body = await _getJson(
+      '/dashboard-summary',
+      {'steamId': steamID},
+    );
+
+    final summary = body['summary'];
+    if (summary is! Map<String, dynamic>) {
+      throw const AppNetworkException(
+        'The dashboard summary response was not in the expected format.',
+      );
+    }
+
+    return DashboardSummary.fromMap(summary);
+  }
+
+  Future<List<AchievementGameSummary>> getAchievementGameSummaries({
+    required String steamID,
+  }) async {
+    if (DemoMode.isDemoSteamId(steamID)) {
+      return DemoMode.achievementSummaries();
+    }
+
+    final body = await _getJson(
+      '/achievement-summaries',
+      {'steamId': steamID},
+    );
+
+    final summaries = body['games'];
+    if (summaries is! List) {
+      throw const AppNetworkException(
+        'The achievement summaries response was not in the expected format.',
+      );
+    }
+
+    return summaries
+        .whereType<Map<String, dynamic>>()
+        .map(AchievementGameSummary.fromMap)
+        .toList(growable: false);
   }
 
   Future<List<GameDetails>> getEveryOwnedGamesGameDetails({

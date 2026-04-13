@@ -1,11 +1,10 @@
-import 'dart:async';
-
 // ignore_for_file: depend_on_referenced_packages
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:steam_achievement_tracker/features/games/screens/games_screen.dart';
 import 'package:steam_achievement_tracker/features/login/screens/login_screen.dart';
+import 'package:steam_achievement_tracker/services/models/games/dashboard_summary.dart';
 import 'package:steam_achievement_tracker/services/models/games/game.dart';
 import 'package:steam_achievement_tracker/services/models/games/game_details.dart';
 import 'package:steam_achievement_tracker/services/models/user/user_steam_information.dart';
@@ -24,14 +23,10 @@ class HomeScreenController extends GetxController with StateMixin<void> {
 
   final Rx<UserSteamInformation> playerSummary =
       UserSteamInformation.empty().obs;
+  final Rx<DashboardSummary> dashboardSummary = DashboardSummary.empty().obs;
   final RxList<Game> playerGamesList = <Game>[].obs;
   final RxList<GameDetails> gameDetails = <GameDetails>[].obs;
   final RxInt steamLevel = 0.obs;
-  final RxBool isLoadingAchievementStats = false.obs;
-  final RxBool hasLoadedAchievementStats = false.obs;
-  final RxInt loadedAchievementGameCount = 0.obs;
-  final RxInt totalAchievementGameCount = 0.obs;
-  final RxString achievementSyncStatus = ''.obs;
 
   init() async {
     change(null, status: RxStatus.loading());
@@ -48,6 +43,11 @@ class HomeScreenController extends GetxController with StateMixin<void> {
             playerSummary.value = summary;
             await PreferenceUtils.setPlayerSummary(summary);
           }),
+        if (dashboardSummary.value.isEmpty)
+          _database.getDashboardSummary(steamID: steamID).then((summary) async {
+            dashboardSummary.value = summary;
+            await PreferenceUtils.setDashboardSummary(summary);
+          }),
         if (playerGamesList.isEmpty)
           _database.getPlayerGamesList(steamID: steamID).then((games) async {
             playerGamesList.assignAll(games);
@@ -55,13 +55,7 @@ class HomeScreenController extends GetxController with StateMixin<void> {
           }),
       ];
       await Future.wait(futures);
-      totalAchievementGameCount.value = playerGamesList.length;
-      if (gameDetails.isNotEmpty) {
-        loadedAchievementGameCount.value = gameDetails.length;
-        hasLoadedAchievementStats.value = true;
-      }
       update();
-      unawaited(_loadAchievementStats());
     } catch (e) {
       change(null, status: RxStatus.error(e.toString()));
     }
@@ -71,47 +65,14 @@ class HomeScreenController extends GetxController with StateMixin<void> {
   void getSharedPreferences() {
     steamLevel.value = PreferenceUtils.getSteamLevel();
     playerSummary.value = PreferenceUtils.getPlayerSummary();
+    dashboardSummary.value = PreferenceUtils.getDashboardSummary();
     playerGamesList.assignAll(PreferenceUtils.getPlayerGamesList());
     gameDetails.assignAll(PreferenceUtils.getGameDetails());
     steamLevel.refresh();
     playerSummary.refresh();
+    dashboardSummary.refresh();
     playerGamesList.refresh();
     gameDetails.refresh();
-    hasLoadedAchievementStats.value = gameDetails.isNotEmpty;
-    loadedAchievementGameCount.value = gameDetails.length;
-    totalAchievementGameCount.value = playerGamesList.length;
-    achievementSyncStatus.value = '';
-  }
-
-  Future<void> _loadAchievementStats() async {
-    isLoadingAchievementStats.value = true;
-    achievementSyncStatus.value = 'Syncing achievement data...';
-    if (gameDetails.isEmpty) {
-      hasLoadedAchievementStats.value = false;
-      loadedAchievementGameCount.value = 0;
-    }
-    try {
-      final refreshedGameDetails = await _database.getEveryOwnedGamesGameDetails(
-        steamID: steamID,
-        games: playerGamesList,
-        onProgress: (completed, total) {
-          loadedAchievementGameCount.value = completed;
-          totalAchievementGameCount.value = total;
-          if (total > 0) {
-            achievementSyncStatus.value =
-                'Syncing achievement data... $completed of $total games checked';
-          }
-        },
-      );
-      gameDetails.assignAll(refreshedGameDetails);
-      await PreferenceUtils.setGameDetails(gameDetails);
-      achievementSyncStatus.value = refreshedGameDetails.isEmpty
-          ? 'No achievement data found yet.'
-          : 'Achievement data synced';
-    } finally {
-      isLoadingAchievementStats.value = false;
-      hasLoadedAchievementStats.value = true;
-    }
   }
 
   /// Navigate the user to the Games Screen.
@@ -131,18 +92,17 @@ class HomeScreenController extends GetxController with StateMixin<void> {
   Future<void> refreshAllData() async {
     await PreferenceUtils.clearCachedData();
     playerSummary.value = UserSteamInformation.empty();
+    dashboardSummary.value = DashboardSummary.empty();
     playerGamesList.clear();
     gameDetails.clear();
     steamLevel.value = 0;
-    loadedAchievementGameCount.value = 0;
-    totalAchievementGameCount.value = 0;
-    achievementSyncStatus.value = '';
     await init();
   }
 
   Future<void> signOut(BuildContext context) async {
     await PreferenceUtils.clearSessionData();
     playerSummary.value = UserSteamInformation.empty();
+    dashboardSummary.value = DashboardSummary.empty();
     playerGamesList.clear();
     gameDetails.clear();
     steamLevel.value = 0;

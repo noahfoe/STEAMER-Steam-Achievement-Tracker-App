@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:steam_achievement_tracker/features/games/screens/game_details_screen.dart';
+import 'package:steam_achievement_tracker/services/models/games/achievement_game_summary.dart';
 import 'package:steam_achievement_tracker/services/models/games/game.dart';
 import 'package:steam_achievement_tracker/services/models/games/game_details.dart';
 import 'package:steam_achievement_tracker/services/utils/app_route.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
+import 'package:steam_achievement_tracker/services/utils/database.dart';
+import 'package:steam_achievement_tracker/services/utils/preference_utils.dart';
+import 'package:steam_achievement_tracker/services/widgets/async_state_panel.dart';
 import 'package:steam_achievement_tracker/services/widgets/network_icon_image.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
@@ -22,13 +26,11 @@ enum AchievementSort {
 
 class AchievementsScreen extends StatefulWidget {
   final String steamID;
-  final List<GameDetails> gameDetails;
   final List<Game> playerGames;
 
   const AchievementsScreen({
     super.key,
     required this.steamID,
-    required this.gameDetails,
     required this.playerGames,
   });
 
@@ -38,8 +40,19 @@ class AchievementsScreen extends StatefulWidget {
 
 class _AchievementsScreenState extends State<AchievementsScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final Database _database = Database.instance;
+
   AchievementFilter _filter = AchievementFilter.all;
   AchievementSort _sort = AchievementSort.nameAsc;
+  List<AchievementGameSummary> _summaries = <AchievementGameSummary>[];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSummaries();
+  }
 
   @override
   void dispose() {
@@ -47,45 +60,153 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     super.dispose();
   }
 
+  Future<void> _loadSummaries({bool forceRefresh = false}) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      if (!forceRefresh) {
+        final cached = PreferenceUtils.getAchievementGameSummaries();
+        if (cached.isNotEmpty) {
+          _summaries = cached;
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+        }
+      }
+
+      final fresh = await _database.getAchievementGameSummaries(
+        steamID: widget.steamID,
+      );
+      _summaries = fresh;
+      await PreferenceUtils.setAchievementGameSummaries(fresh);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = error.toString();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final totalAchievements = widget.gameDetails
-        .map((e) => e.allAchievements ?? const [])
-        .expand((e) => e)
-        .length;
-    final unlockedAchievements = widget.gameDetails
-        .map((e) => e.unlockedAchievements ?? const [])
-        .expand((e) => e)
-        .length;
-    final lockedAchievements = widget.gameDetails
-        .map((e) => e.lockedAchievements ?? const [])
-        .expand((e) => e)
-        .length;
-    final allAchievementGames = widget.gameDetails
-        .where((details) => (details.allAchievements ?? const []).isNotEmpty)
-        .toList(growable: false);
-    final perfectedGames = allAchievementGames
-        .where((details) => (details.lockedAchievements ?? const []).isEmpty)
-        .toList(growable: false)
-      ..sort(
-        (a, b) => (a.gameName ?? '')
-            .toLowerCase()
-            .compareTo((b.gameName ?? '').toLowerCase()),
-      );
-    final visibleGames = _buildVisibleGames(allAchievementGames);
+    final totalAchievements =
+        _summaries.fold<int>(0, (sum, game) => sum + game.totalAchievements);
+    final unlockedAchievements =
+        _summaries.fold<int>(0, (sum, game) => sum + game.unlockedAchievements);
+    final lockedAchievements =
+        _summaries.fold<int>(0, (sum, game) => sum + game.lockedAchievements);
+    final perfectedGames =
+        _summaries.where((game) => game.isPerfected).toList(growable: false)
+          ..sort(
+            (a, b) =>
+                a.gameName.toLowerCase().compareTo(b.gameName.toLowerCase()),
+          );
+    final visibleGames = _buildVisibleGames(_summaries);
 
     return Scaffold(
       backgroundColor: KColors.backgroundColor,
       appBar: myAppBar(title: 'Achievements'),
-      body: ListView(
+      body: _buildBody(
+        context,
+        totalAchievements: totalAchievements,
+        unlockedAchievements: unlockedAchievements,
+        lockedAchievements: lockedAchievements,
+        perfectedGames: perfectedGames.length,
+        visibleGames: visibleGames,
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context, {
+    required int totalAchievements,
+    required int unlockedAchievements,
+    required int lockedAchievements,
+    required int perfectedGames,
+    required List<AchievementGameSummary> visibleGames,
+  }) {
+    if (_isLoading && _summaries.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: KColors.menuHighlightColor,
+        ),
+      );
+    }
+
+    if (_errorMessage != null && _summaries.isEmpty) {
+      return AsyncStatePanel(
+        icon: Icons.cloud_off_rounded,
+        title: 'Achievements Unavailable',
+        message: _errorMessage!,
+        actionLabel: 'Retry',
+        onAction: () => _loadSummaries(forceRefresh: true),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => _loadSummaries(forceRefresh: true),
+      color: KColors.menuHighlightColor,
+      child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
         children: [
           _AchievementsHero(
             totalAchievements: totalAchievements,
             unlockedAchievements: unlockedAchievements,
-            perfectedGames: perfectedGames.length,
+            perfectedGames: perfectedGames,
           ),
           const SizedBox(height: 18),
+          if (_isLoading)
+            Container(
+              margin: const EdgeInsets.only(bottom: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: KColors.primaryColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: KColors.lightBackgroundColor.withValues(alpha: 0.55),
+                ),
+              ),
+              child: const Row(
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: KColors.menuHighlightColor,
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Refreshing achievement summaries...',
+                      style: TextStyle(
+                        color: KColors.activeTextColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -104,7 +225,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
               ),
               _AchievementSummaryCard(
                 title: '100% Games',
-                value: '${perfectedGames.length}',
+                value: '$perfectedGames',
               ),
             ],
           ),
@@ -201,126 +322,121 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
           if (visibleGames.isEmpty)
             const _EmptyAchievementsState()
           else
-            ...visibleGames.map(
-              (details) {
-                final matchingGame =
-                    widget.playerGames.cast<Game?>().firstWhere(
-                          (game) => game?.name == details.gameName,
-                          orElse: () => null,
-                        );
-                final total = (details.allAchievements ?? const []).length;
-                final unlocked =
-                    (details.unlockedAchievements ?? const []).length;
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(
-                    color: KColors.primaryColor,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color:
-                          KColors.lightBackgroundColor.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: matchingGame == null
-                          ? null
-                          : () {
-                              Navigator.of(context).push(
-                                AppRoute.fadeSlide(
-                                  builder: (context) => GameDetailsScreen(
-                                    steamID: widget.steamID,
-                                    game: matchingGame,
-                                    gameDetails: details,
-                                  ),
-                                ),
-                              );
-                            },
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            if (matchingGame?.imgIconUrl != null)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: NetworkIconImage(
-                                  imageUrl: matchingGame!.imgIconUrl!,
-                                  size: 44,
-                                  borderRadius: 10,
-                                ),
-                              ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    details.gameName ?? 'Unknown Game',
-                                    style: const TextStyle(
-                                      color: KColors.activeTextColor,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '$unlocked/$total unlocked',
-                                    style: const TextStyle(
-                                      color: KColors.inactiveTextColor,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  LinearProgressIndicator(
-                                    minHeight: 7,
-                                    value: total == 0 ? 0 : unlocked / total,
-                                    backgroundColor: KColors.backgroundColor,
-                                    valueColor: const AlwaysStoppedAnimation(
-                                      KColors.menuHighlightColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if ((details.lockedAchievements ?? const [])
-                                .isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.only(left: 12),
-                                child: Icon(
-                                  Icons.verified_rounded,
-                                  color: KColors.menuHighlightColor,
-                                  size: 20,
-                                ),
-                              )
-                            else
-                              const Padding(
-                                padding: EdgeInsets.only(left: 12),
-                                child: Icon(
-                                  Icons.chevron_right_rounded,
-                                  color: KColors.inactiveTextColor,
-                                  size: 20,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+            ...visibleGames.map((summary) => _buildSummaryCard(context, summary)),
         ],
       ),
     );
   }
 
-  List<GameDetails> _buildVisibleGames(List<GameDetails> source) {
+  Widget _buildSummaryCard(
+    BuildContext context,
+    AchievementGameSummary summary,
+  ) {
+    final matchingGame = widget.playerGames.cast<Game?>().firstWhere(
+          (game) => game?.appId == summary.appId,
+          orElse: () => null,
+        );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: KColors.primaryColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: KColors.lightBackgroundColor.withValues(alpha: 0.55),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: matchingGame == null
+              ? null
+              : () {
+                  Navigator.of(context).push(
+                    AppRoute.fadeSlide(
+                      builder: (context) => GameDetailsScreen(
+                        steamID: widget.steamID,
+                        game: matchingGame,
+                        gameDetails: GameDetails.empty(),
+                      ),
+                    ),
+                  );
+                },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                if (summary.imageUrl.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: NetworkIconImage(
+                      imageUrl: summary.imageUrl,
+                      size: 44,
+                      borderRadius: 10,
+                    ),
+                  ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        summary.gameName,
+                        style: const TextStyle(
+                          color: KColors.activeTextColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${summary.unlockedAchievements}/${summary.totalAchievements} unlocked',
+                        style: const TextStyle(
+                          color: KColors.inactiveTextColor,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        minHeight: 7,
+                        value: summary.totalAchievements == 0
+                            ? 0
+                            : summary.unlockedAchievements /
+                                summary.totalAchievements,
+                        backgroundColor: KColors.backgroundColor,
+                        valueColor: const AlwaysStoppedAnimation(
+                          KColors.menuHighlightColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Icon(
+                    summary.isPerfected
+                        ? Icons.verified_rounded
+                        : Icons.chevron_right_rounded,
+                    color: summary.isPerfected
+                        ? KColors.menuHighlightColor
+                        : KColors.inactiveTextColor,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<AchievementGameSummary> _buildVisibleGames(
+    List<AchievementGameSummary> source,
+  ) {
     final query = _searchController.text.trim().toLowerCase();
     final filtered = source.where((details) {
-      final matchesSearch =
-          (details.gameName ?? '').toLowerCase().contains(query);
+      final matchesSearch = details.gameName.toLowerCase().contains(query);
       if (!matchesSearch) {
         return false;
       }
@@ -328,30 +444,22 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         case AchievementFilter.all:
           return true;
         case AchievementFilter.perfected:
-          return (details.lockedAchievements ?? const []).isEmpty;
+          return details.isPerfected;
         case AchievementFilter.inProgress:
-          return (details.lockedAchievements ?? const []).isNotEmpty;
+          return details.lockedAchievements > 0;
       }
     }).toList(growable: false);
 
     filtered.sort((a, b) {
       switch (_sort) {
         case AchievementSort.nameAsc:
-          return (a.gameName ?? '')
-              .toLowerCase()
-              .compareTo((b.gameName ?? '').toLowerCase());
+          return a.gameName.toLowerCase().compareTo(b.gameName.toLowerCase());
         case AchievementSort.nameDesc:
-          return (b.gameName ?? '')
-              .toLowerCase()
-              .compareTo((a.gameName ?? '').toLowerCase());
+          return b.gameName.toLowerCase().compareTo(a.gameName.toLowerCase());
         case AchievementSort.mostAchievements:
-          return (b.allAchievements ?? const [])
-              .length
-              .compareTo((a.allAchievements ?? const []).length);
+          return b.totalAchievements.compareTo(a.totalAchievements);
         case AchievementSort.fewestLocked:
-          return (a.lockedAchievements ?? const [])
-              .length
-              .compareTo((b.lockedAchievements ?? const []).length);
+          return a.lockedAchievements.compareTo(b.lockedAchievements);
       }
     });
     return filtered;
@@ -367,24 +475,15 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       items: const [
         DropdownMenuItem(
           value: AchievementFilter.all,
-          child: Text(
-            'All',
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: Text('All', overflow: TextOverflow.ellipsis),
         ),
         DropdownMenuItem(
           value: AchievementFilter.perfected,
-          child: Text(
-            'Perfected',
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: Text('Perfected', overflow: TextOverflow.ellipsis),
         ),
         DropdownMenuItem(
           value: AchievementFilter.inProgress,
-          child: Text(
-            'In Progress',
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: Text('In Progress', overflow: TextOverflow.ellipsis),
         ),
       ],
       onChanged: (value) {
@@ -405,31 +504,19 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       items: const [
         DropdownMenuItem(
           value: AchievementSort.nameAsc,
-          child: Text(
-            'Name A-Z',
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: Text('Name A-Z', overflow: TextOverflow.ellipsis),
         ),
         DropdownMenuItem(
           value: AchievementSort.nameDesc,
-          child: Text(
-            'Name Z-A',
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: Text('Name Z-A', overflow: TextOverflow.ellipsis),
         ),
         DropdownMenuItem(
           value: AchievementSort.mostAchievements,
-          child: Text(
-            'Most Achievements',
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: Text('Most Achievements', overflow: TextOverflow.ellipsis),
         ),
         DropdownMenuItem(
           value: AchievementSort.fewestLocked,
-          child: Text(
-            'Fewest Locked',
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: Text('Fewest Locked', overflow: TextOverflow.ellipsis),
         ),
       ],
       onChanged: (value) {

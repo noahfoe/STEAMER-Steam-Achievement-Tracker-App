@@ -3,6 +3,8 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:steam_achievement_tracker/services/models/games/achievement_game_summary.dart';
+import 'package:steam_achievement_tracker/services/models/games/dashboard_summary.dart';
 import 'package:steam_achievement_tracker/services/models/games/game.dart';
 import 'package:steam_achievement_tracker/services/models/games/game_details.dart';
 import 'package:steam_achievement_tracker/services/models/user/user_steam_information.dart';
@@ -53,6 +55,32 @@ class PreferenceUtils {
         .setStringList('gameDetails', value.map((e) => e.toJson()).toList());
   }
 
+  static DashboardSummary getDashboardSummary() {
+    final temp = _prefsInstance!.getString('dashboardSummary');
+    if (temp == null || temp.isEmpty) {
+      return DashboardSummary.empty();
+    }
+    return DashboardSummary.fromJson(temp);
+  }
+
+  static Future<void> setDashboardSummary(DashboardSummary value) async {
+    await _prefsInstance!.setString('dashboardSummary', value.toJson());
+  }
+
+  static List<AchievementGameSummary> getAchievementGameSummaries() {
+    final temp = _prefsInstance!.getStringList('achievementGameSummaries') ?? [];
+    return temp.map(AchievementGameSummary.fromJson).toList();
+  }
+
+  static Future<void> setAchievementGameSummaries(
+    List<AchievementGameSummary> value,
+  ) async {
+    await _prefsInstance!.setStringList(
+      'achievementGameSummaries',
+      value.map((e) => e.toJson()).toList(),
+    );
+  }
+
   static UserSteamInformation getPlayerSummary() {
     var temp = _prefsInstance!.getString('playerSummary') ??
         UserSteamInformation.empty().toJson();
@@ -75,6 +103,8 @@ class PreferenceUtils {
     await _prefsInstance!.remove('playerGamesList');
     await _prefsInstance!.remove('steamLevel');
     await _prefsInstance!.remove('gameDetails');
+    await _prefsInstance!.remove('dashboardSummary');
+    await _prefsInstance!.remove('achievementGameSummaries');
     await _prefsInstance!.remove('playerSummary');
   }
 

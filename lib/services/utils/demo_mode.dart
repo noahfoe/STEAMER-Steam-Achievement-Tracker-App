@@ -1,4 +1,6 @@
 import 'package:steam_achievement_tracker/services/models/games/achievement.dart';
+import 'package:steam_achievement_tracker/services/models/games/achievement_game_summary.dart';
+import 'package:steam_achievement_tracker/services/models/games/dashboard_summary.dart';
 import 'package:steam_achievement_tracker/services/models/games/game.dart';
 import 'package:steam_achievement_tracker/services/models/games/game_details.dart';
 import 'package:steam_achievement_tracker/services/models/games/global_achievement_percentages.dart';
@@ -220,6 +222,56 @@ class DemoMode {
       .map((game) => detailsForApp(game.appId))
       .where((details) => details != GameDetails.empty())
       .toList(growable: false);
+
+  static List<AchievementGameSummary> achievementSummaries() => games
+      .map((game) {
+        final details = detailsForApp(game.appId);
+        final total = (details.allAchievements ?? const <Achievement>[]).length;
+        if (total == 0) {
+          return null;
+        }
+        final unlocked =
+            (details.unlockedAchievements ?? const <Achievement>[]).length;
+        final locked =
+            (details.lockedAchievements ?? const <Achievement>[]).length;
+        return AchievementGameSummary(
+          appId: game.appId,
+          gameName: game.name,
+          imageUrl: game.imgIconUrl ?? '',
+          totalAchievements: total,
+          unlockedAchievements: unlocked,
+          lockedAchievements: locked,
+        );
+      })
+      .whereType<AchievementGameSummary>()
+      .toList(growable: false);
+
+  static DashboardSummary dashboardSummary() {
+    final summaries = achievementSummaries();
+    final totalHours = games.fold<int>(
+      0,
+      (sum, game) => sum + (game.playtimeForever ?? 0),
+    );
+
+    return DashboardSummary(
+      totalGames: games.length,
+      totalHoursPlayed: totalHours,
+      totalAchievements: summaries.fold<int>(
+        0,
+        (sum, game) => sum + game.totalAchievements,
+      ),
+      unlockedAchievements: summaries.fold<int>(
+        0,
+        (sum, game) => sum + game.unlockedAchievements,
+      ),
+      lockedAchievements: summaries.fold<int>(
+        0,
+        (sum, game) => sum + game.lockedAchievements,
+      ),
+      perfectedGames: summaries.where((game) => game.isPerfected).length,
+      gamesWithAchievements: summaries.length,
+    );
+  }
 
   static List<GlobalAchievementPercentages> percentagesForApp(int appId) {
     final details = detailsForApp(appId);
