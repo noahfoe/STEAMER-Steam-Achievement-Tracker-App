@@ -91,6 +91,7 @@
           <li>To load your Steam profile</li>
           <li>To show your library and achievement progress</li>
           <li>To cache data locally on your device for faster loading</li>
+          <li>To cache selected API responses on Cloudflare for faster loading</li>
         </ul>
 
         <h2>What the app does not store</h2>
@@ -112,12 +113,29 @@
           STEAMER uses a Cloudflare Worker to proxy Steam Web API requests that
           require a server-side API key.
         </p>
+        <p>
+          To improve performance, some Steam-related API responses may also be
+          temporarily cached using Cloudflare Workers KV. This may include data
+          such as Steam ID, public Steam profile details, owned games, and
+          achievement-related response data. This caching is used only to speed
+          up repeated requests and is not used to sell personal data.
+        </p>
 
         <h2>Third-party services</h2>
         <ul>
-          <li>Cloudflare, for backend request handling</li>
+          <li>
+            Cloudflare, for backend request handling and temporary API caching
+          </li>
           <li>Valve/Steam, for public profile and achievement data</li>
         </ul>
+
+        <h2>Data transmission and retention</h2>
+        <p>
+          Requests between the app, Cloudflare, and Steam are sent over HTTPS.
+          Cached data may be retained for a limited time in local app storage
+          and in Cloudflare performance caches before being refreshed or
+          expiring automatically.
+        </p>
 
         <h2>Changes</h2>
         <p>This privacy policy may be updated from time to time.</p>

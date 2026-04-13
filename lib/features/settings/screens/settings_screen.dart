@@ -3,9 +3,9 @@ import 'package:steam_achievement_tracker/services/utils/app_update_service.dart
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
-const _releaseVersion = '1.1.0';
+const _releaseVersion = '1.1.1';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   final Future<void> Function()? onSignOut;
   final Future<void> Function()? onRefreshLibrary;
 
@@ -14,6 +14,15 @@ class SettingsScreen extends StatelessWidget {
     this.onSignOut,
     this.onRefreshLibrary,
   }) : super(key: key);
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _isRefreshingLibrary = false;
+  String? _refreshStatusMessage;
+  bool _refreshWasSuccessful = false;
 
   Future<void> _showAboutDialog(BuildContext context) async {
     showAboutDialog(
@@ -29,6 +38,43 @@ class SettingsScreen extends StatelessWidget {
     await AppUpdateService.checkForUpdates(context);
   }
 
+  Future<void> _refreshLibrary(BuildContext context) async {
+    if (widget.onRefreshLibrary == null || _isRefreshingLibrary) {
+      return;
+    }
+
+    setState(() {
+      _isRefreshingLibrary = true;
+      _refreshWasSuccessful = false;
+      _refreshStatusMessage = 'Refreshing your Steam profile, library, and dashboard data...';
+    });
+
+    try {
+      await widget.onRefreshLibrary!.call();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isRefreshingLibrary = false;
+        _refreshWasSuccessful = true;
+        _refreshStatusMessage =
+            'Library refresh complete. Your latest Steam data is ready.';
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isRefreshingLibrary = false;
+        _refreshWasSuccessful = false;
+        _refreshStatusMessage = error.toString();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,6 +85,19 @@ class SettingsScreen extends StatelessWidget {
         children: [
           const _SettingsHero(),
           const SizedBox(height: 22),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: _refreshStatusMessage == null
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: _RefreshStatusCard(
+                      isLoading: _isRefreshingLibrary,
+                      isSuccess: _refreshWasSuccessful,
+                      message: _refreshStatusMessage!,
+                    ),
+                  ),
+          ),
           _SettingsSection(
             title: const _SectionLabel(
               title: 'General',
@@ -82,19 +141,36 @@ class SettingsScreen extends StatelessWidget {
                   Icons.logout,
                   color: KColors.inactiveTextColor,
                 ),
-                onTap: onSignOut == null ? null : () => onSignOut!.call(),
+                onTap: widget.onSignOut == null || _isRefreshingLibrary
+                    ? null
+                    : () => widget.onSignOut!.call(),
               ),
               _BasicSettingButton(
                 title: "Refresh Library",
-                subtitle:
-                    "Re-sync your profile, library, and achievements from Steam.",
-                icon: const Icon(
-                  Icons.refresh,
-                  color: KColors.inactiveTextColor,
+                subtitle: _isRefreshingLibrary
+                    ? "Refreshing your Steam data now. This may take a moment."
+                    : "Re-sync your profile, library, and achievements from Steam.",
+                icon: Icon(
+                  _isRefreshingLibrary ? Icons.sync_rounded : Icons.refresh,
+                  color: _isRefreshingLibrary
+                      ? KColors.menuHighlightColor
+                      : KColors.inactiveTextColor,
                 ),
-                onTap: onRefreshLibrary == null
+                trailing: _isRefreshingLibrary
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: KColors.menuHighlightColor,
+                        ),
+                      )
+                    : null,
+                isEnabled:
+                    widget.onRefreshLibrary != null && !_isRefreshingLibrary,
+                onTap: widget.onRefreshLibrary == null
                     ? null
-                    : () => onRefreshLibrary!.call(),
+                    : () => _refreshLibrary(context),
               ),
             ],
           ),
@@ -161,7 +237,7 @@ class _SettingsHero extends StatelessWidget {
                 ),
                 SizedBox(width: 8),
                 Text(
-                  'Current version 1.1.0',
+                  'Current version 1.1.1',
                   style: TextStyle(
                     color: KColors.activeTextColor,
                     fontSize: 13,
@@ -249,6 +325,8 @@ class _BasicSettingButton extends StatelessWidget {
   final String title;
   final String subtitle;
   final Icon icon;
+  final Widget? trailing;
+  final bool isEnabled;
   final Function()? onTap;
 
   const _BasicSettingButton({
@@ -256,6 +334,8 @@ class _BasicSettingButton extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.subtitle,
+    this.trailing,
+    this.isEnabled = true,
     this.onTap,
   }) : super(key: key);
 
@@ -264,14 +344,16 @@ class _BasicSettingButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: isEnabled ? onTap : null,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
           width: double.infinity,
           decoration: BoxDecoration(
-            color: KColors.backgroundColor,
+            color: isEnabled
+                ? KColors.backgroundColor
+                : KColors.backgroundColor.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
@@ -284,8 +366,10 @@ class _BasicSettingButton extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: KColors.activeTextColor,
+                      style: TextStyle(
+                        color: isEnabled
+                            ? KColors.activeTextColor
+                            : KColors.inactiveTextColor,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -302,13 +386,111 @@ class _BasicSettingButton extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: KColors.inactiveTextColor,
-              ),
+              trailing ??
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: KColors.inactiveTextColor,
+                  ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _RefreshStatusCard extends StatelessWidget {
+  final bool isLoading;
+  final bool isSuccess;
+  final String message;
+
+  const _RefreshStatusCard({
+    required this.isLoading,
+    required this.isSuccess,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = isLoading
+        ? KColors.menuHighlightColor
+        : isSuccess
+            ? const Color(0xff7dd3a3)
+            : const Color(0xfff4b266);
+
+    final icon = isLoading
+        ? Icons.sync_rounded
+        : isSuccess
+            ? Icons.check_circle_rounded
+            : Icons.info_outline_rounded;
+
+    final title = isLoading
+        ? 'Refreshing Library'
+        : isSuccess
+            ? 'Refresh Complete'
+            : 'Refresh Notice';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: KColors.primaryColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withValues(alpha: 0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: isLoading
+                ? const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: KColors.menuHighlightColor,
+                    ),
+                  )
+                : Icon(icon, color: accent, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: KColors.activeTextColor,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: KColors.inactiveTextColor,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

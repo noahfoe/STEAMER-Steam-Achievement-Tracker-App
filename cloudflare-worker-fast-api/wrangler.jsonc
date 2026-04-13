@@ -1,0 +1,11 @@
+{
+  "name": "steam-tracker-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-04-12",
+  "kv_namespaces": [
+    {
+      "binding": "STEAMER_CACHE",
+      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+    }
+  ]
+}

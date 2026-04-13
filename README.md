@@ -31,7 +31,88 @@ The app is configured to use this Cloudflare Worker base URL:
 
 `https://steam-tracker-api.noahfoley6.workers.dev`
 
+The Worker implementation used for the current performance fixes lives in:
+
+- [cloudflare-worker-fast-api/src/index.js](cloudflare-worker-fast-api/src/index.js)
+- [cloudflare-worker-fast-api/README.md](cloudflare-worker-fast-api/README.md)
+
 See [database.dart](lib/services/utils/database.dart) for the current API wiring.
+
+### Backend Performance Enhancements
+
+The original backend flow was functional, but slow for large Steam libraries because
+the app had to fetch a lot of per-game data before the Home screen could feel
+complete.
+
+The current backend setup fixes that in a few important ways:
+
+- Added Cloudflare KV caching for Steam responses so repeat loads are much faster
+- Added aggregated endpoints so the app no longer has to calculate Home totals on-device
+- Kept the older proxy endpoints so already-installed app builds remain compatible
+- Moved more of the expensive work to the Worker instead of the Flutter client
+
+### Current Worker Endpoints
+
+Existing proxy endpoints:
+
+- `/player-summary`
+- `/steam-level`
+- `/owned-games`
+- `/game-schema`
+- `/player-achievements`
+- `/global-achievement-percentages`
+
+New fast endpoints:
+
+- `/dashboard-summary?steamId=...`
+- `/achievement-summaries?steamId=...`
+
+### What The New Endpoints Do
+
+`/dashboard-summary`
+
+- returns a single summary payload for the Home screen
+- includes total games, total hours played, total achievements, unlocked, locked, and perfected games
+- lets the app render the dashboard quickly without crawling every game first
+
+`/achievement-summaries`
+
+- returns a lightweight list of per-game achievement totals
+- powers the Achievements screen without needing full details for every game up front
+- keeps full per-game achievement fetches on-demand when a user opens a specific game
+
+### Cache Strategy
+
+The Worker currently caches both raw Steam responses and aggregated app-friendly
+responses. Cached keys include:
+
+- `player-summary:<steamId>`
+- `steam-level:<steamId>`
+- `owned-games:<steamId>`
+- `game-schema:<appId>`
+- `player-achievements:<steamId>:<appId>`
+- `global-achievement-percentages:<appId>`
+- `achievement-summaries:<steamId>`
+- `dashboard-summary:<steamId>`
+
+This means:
+
+- first loads for a very large Steam library can still take longer while Cloudflare warms the cache
+- repeat loads are dramatically faster
+- the app can still clear its local cache independently of the Worker cache for testing
+
+### Cloudflare Bindings
+
+The Worker expects:
+
+- Secret: `STEAM_API_KEY`
+- KV binding: `STEAMER_CACHE`
+
+### App-Side Result
+
+On the Flutter side, the Home screen now loads from the aggregated summary endpoint
+instead of waiting on a full achievement crawl, and the Achievements screen loads
+from cached summary data before deeper per-game requests are made.
 
 ## Getting Started
 
@@ -95,9 +176,9 @@ Android app id:
 
 `com.thepetrichor.steamer`
 
-Recommended first production version:
+Expected release version:
 
-`1.1.0+6`
+`1.1.1+7`
 
 For more detail, see [release-prep.md](branding/release-prep.md).
 

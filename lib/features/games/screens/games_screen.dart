@@ -32,7 +32,7 @@ class GamesScreen extends StatelessWidget {
         return details;
       }
     }
-    return GameDetails.empty().copyWith(gameName: game.name);
+    return GameDetails.empty();
   }
 
   @override
