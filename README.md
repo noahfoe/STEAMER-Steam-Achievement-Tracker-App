@@ -178,7 +178,7 @@ Android app id:
 
 Expected release version:
 
-`1.1.1+7`
+`1.1.2+8`
 
 For more detail, see [release-prep.md](branding/release-prep.md).
 

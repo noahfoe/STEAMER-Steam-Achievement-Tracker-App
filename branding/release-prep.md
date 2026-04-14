@@ -17,7 +17,7 @@
 ## Versioning strategy
 
 - First test release: `1.0.0`
-- Estimated first prod release: `1.1.1`
+- Estimated first prod release: `1.1.2`
 - Bug fix updates: `1.0.1`, `1.0.2`, etc.
 - Small feature updates: `1.1.0`, `1.2.0`, etc.
 - Large feature updates: `2.0.0`, `3.0.0`, etc.

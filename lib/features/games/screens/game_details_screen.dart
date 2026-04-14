@@ -8,6 +8,7 @@ import 'package:steam_achievement_tracker/services/models/games/game.dart';
 import 'package:steam_achievement_tracker/services/models/games/game_details.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
 import 'package:steam_achievement_tracker/services/widgets/async_state_panel.dart';
+import 'package:steam_achievement_tracker/services/widgets/app_skeletons.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
 class GameDetailsScreen extends StatelessWidget {
@@ -35,7 +36,7 @@ class GameDetailsScreen extends StatelessWidget {
           backgroundColor: KColors.backgroundColor,
           appBar: myAppBar(title: game.name),
           body: controller.obx(
-            onLoading: const Center(child: CircularProgressIndicator()),
+            onLoading: GameDetailsScreenSkeleton(gameName: game.name),
             onEmpty: AsyncStatePanel(
               icon: Icons.emoji_events_outlined,
               title: 'No Achievement Data',

@@ -3,7 +3,7 @@ import 'package:steam_achievement_tracker/services/utils/app_update_service.dart
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
-const _releaseVersion = '1.1.1';
+const _releaseVersion = '1.1.2';
 
 class SettingsScreen extends StatefulWidget {
   final Future<void> Function()? onSignOut;
@@ -46,7 +46,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _isRefreshingLibrary = true;
       _refreshWasSuccessful = false;
-      _refreshStatusMessage = 'Refreshing your Steam profile, library, and dashboard data...';
+      _refreshStatusMessage =
+          'Refreshing your Steam profile, library, and dashboard data...';
     });
 
     try {
@@ -237,7 +238,7 @@ class _SettingsHero extends StatelessWidget {
                 ),
                 SizedBox(width: 8),
                 Text(
-                  'Current version 1.1.1',
+                  'Current version $_releaseVersion',
                   style: TextStyle(
                     color: KColors.activeTextColor,
                     fontSize: 13,

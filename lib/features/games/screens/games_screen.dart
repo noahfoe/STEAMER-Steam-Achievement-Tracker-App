@@ -9,6 +9,7 @@ import 'package:steam_achievement_tracker/services/models/games/game_details.dar
 import 'package:steam_achievement_tracker/services/models/user/user_steam_information.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
 import 'package:steam_achievement_tracker/services/widgets/async_state_panel.dart';
+import 'package:steam_achievement_tracker/services/widgets/app_skeletons.dart';
 import 'package:steam_achievement_tracker/services/widgets/network_icon_image.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
@@ -49,7 +50,7 @@ class GamesScreen extends StatelessWidget {
             title: 'Library',
           ),
           body: controller.obx(
-            onLoading: const Center(child: CircularProgressIndicator()),
+            onLoading: const GamesScreenSkeleton(),
             onEmpty: const AsyncStatePanel(
               icon: Icons.library_books_outlined,
               title: 'No Games Found',

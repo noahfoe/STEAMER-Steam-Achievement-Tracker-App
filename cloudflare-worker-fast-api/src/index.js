@@ -63,7 +63,11 @@ export default {
           );
         case "/achievement-summaries":
           return jsonResponse(
-            await getAchievementSummaries(env, requireSteamId(steamId), skipCache),
+            await getAchievementSummaries(
+              env,
+              requireSteamId(steamId),
+              skipCache,
+            ),
           );
         case "/dashboard-summary":
           return jsonResponse(
@@ -139,8 +143,12 @@ async function getPlayerSummary(env, steamId, skipCache = false) {
 }
 
 async function getSteamLevel(env, steamId, skipCache = false) {
-  return getOrCacheJson(env, `steam-level:${steamId}`, TTL.steamLevel, () =>
-    steamGet(env, "/IPlayerService/GetSteamLevel/v1/", { steamid: steamId }),
+  return getOrCacheJson(
+    env,
+    `steam-level:${steamId}`,
+    TTL.steamLevel,
+    () =>
+      steamGet(env, "/IPlayerService/GetSteamLevel/v1/", { steamid: steamId }),
     skipCache,
   );
 }
@@ -151,17 +159,23 @@ async function getOwnedGames(env, steamId, skipCache = false) {
     `owned-games:${steamId}`,
     TTL.ownedGames,
     async () => {
-      const apiPayload = await steamGet(env, "/IPlayerService/GetOwnedGames/v1/", {
-        steamid: steamId,
-        include_appinfo: "true",
-        include_played_free_games: "true",
-      });
+      const apiPayload = await steamGet(
+        env,
+        "/IPlayerService/GetOwnedGames/v1/",
+        {
+          steamid: steamId,
+          include_appinfo: "true",
+          include_played_free_games: "true",
+        },
+      );
 
       const apiGames = Array.isArray(apiPayload?.response?.games)
         ? apiPayload.response.games
         : [];
 
-      const communityGames = await getCommunityOwnedGames(steamId).catch(() => []);
+      const communityGames = await getCommunityOwnedGames(steamId).catch(
+        () => [],
+      );
       const mergedGames = mergeOwnedGames(apiGames, communityGames);
 
       return {
@@ -176,11 +190,15 @@ async function getOwnedGames(env, steamId, skipCache = false) {
 }
 
 async function getGameSchema(env, appId, skipCache = false) {
-  return getOrCacheJson(env, `game-schema:${appId}`, TTL.gameSchema, () =>
-    steamGet(env, "/ISteamUserStats/GetSchemaForGame/v2/", {
-      appid: String(appId),
-      l: "english",
-    }),
+  return getOrCacheJson(
+    env,
+    `game-schema:${appId}`,
+    TTL.gameSchema,
+    () =>
+      steamGet(env, "/ISteamUserStats/GetSchemaForGame/v2/", {
+        appid: String(appId),
+        l: "english",
+      }),
     skipCache,
   );
 }
@@ -392,7 +410,9 @@ async function collectAchievementSummaries(env, steamId, skipCache = false) {
     })
     .sort((a, b) => a.gameName.localeCompare(b.gameName));
 
-  const failedAppIds = new Set(failures.map((failure) => Number(failure.appId)));
+  const failedAppIds = new Set(
+    failures.map((failure) => Number(failure.appId)),
+  );
   const noAchievementGames = ownedGames
     .filter(
       (game) =>
@@ -534,7 +554,7 @@ async function fetchSteamCommunityGamesXml(steamId) {
           accept: "application/xml,text/xml,text/plain",
           "accept-language": "en-US,en;q=0.9",
           "user-agent":
-            "STEAMER/1.1.1 (+https://steam-tracker-api.noahfoley6.workers.dev)",
+            "STEAMER/1.1.2 (+https://steam-tracker-api.noahfoley6.workers.dev)",
         },
         signal: controller.signal,
       });
@@ -607,7 +627,9 @@ function parseCommunityOwnedGameBlock(block) {
   return {
     appid: appId,
     name: name || `App ${appId}`,
-    playtime_forever: parseHoursToMinutes(extractXmlTagValue(block, "hoursOnRecord")),
+    playtime_forever: parseHoursToMinutes(
+      extractXmlTagValue(block, "hoursOnRecord"),
+    ),
     playtime_2weeks: parseHoursToMinutes(
       extractXmlTagValue(block, "hoursLast2Weeks"),
     ),
@@ -655,7 +677,9 @@ function decodeXmlEntities(value) {
 }
 
 function parseHoursToMinutes(value) {
-  const match = String(value || "").replaceAll(",", "").match(/[\d.]+/);
+  const match = String(value || "")
+    .replaceAll(",", "")
+    .match(/[\d.]+/);
   const hours = Number(match?.[0] ?? 0);
 
   if (!Number.isFinite(hours) || hours <= 0) {
@@ -811,7 +835,7 @@ async function fetchSteamCommunityProfileHtml(steamId) {
           accept: "text/html,application/xhtml+xml",
           "accept-language": "en-US,en;q=0.9",
           "user-agent":
-            "STEAMER/1.1.1 (+https://steam-tracker-api.noahfoley6.workers.dev)",
+            "STEAMER/1.1.2 (+https://steam-tracker-api.noahfoley6.workers.dev)",
         },
         signal: controller.signal,
       });

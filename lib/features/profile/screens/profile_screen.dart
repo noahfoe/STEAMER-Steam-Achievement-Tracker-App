@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:steam_achievement_tracker/services/models/user/user_steam_information.dart';
 import 'package:steam_achievement_tracker/services/utils/colors.dart';
+import 'package:steam_achievement_tracker/services/widgets/app_skeletons.dart';
 import 'package:steam_achievement_tracker/services/widgets/custom_image.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
@@ -18,34 +19,38 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLoadingProfile = playerSummary == UserSteamInformation.empty();
+
     return Scaffold(
       backgroundColor: KColors.backgroundColor,
       appBar: myAppBar(title: 'Profile'),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-        children: [
-          _ProfileHero(
-            playerSummary: playerSummary,
-            steamLevel: steamLevel,
-          ),
-          const SizedBox(height: 22),
-          const _SectionLabel(
-            title: 'Account Snapshot',
-            subtitle:
-                'A cleaner summary of the public profile details currently visible to STEAMER.',
-          ),
-          const SizedBox(height: 14),
-          _ProfileInfoRow(label: 'Steam ID', value: steamId),
-          _ProfileInfoRow(
-            label: 'Display Name',
-            value: playerSummary.steamName ?? 'Not available',
-          ),
-          _ProfileInfoRow(
-            label: 'Real Name',
-            value: playerSummary.realName ?? 'Not available',
-          ),
-        ],
-      ),
+      body: isLoadingProfile
+          ? const ProfileScreenSkeleton()
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              children: [
+                _ProfileHero(
+                  playerSummary: playerSummary,
+                  steamLevel: steamLevel,
+                ),
+                const SizedBox(height: 22),
+                const _SectionLabel(
+                  title: 'Account Snapshot',
+                  subtitle:
+                      'A cleaner summary of the public profile details currently visible to STEAMER.',
+                ),
+                const SizedBox(height: 14),
+                _ProfileInfoRow(label: 'Steam ID', value: steamId),
+                _ProfileInfoRow(
+                  label: 'Display Name',
+                  value: playerSummary.steamName ?? 'Not available',
+                ),
+                _ProfileInfoRow(
+                  label: 'Real Name',
+                  value: playerSummary.realName ?? 'Not available',
+                ),
+              ],
+            ),
     );
   }
 }

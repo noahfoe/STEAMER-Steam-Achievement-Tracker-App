@@ -14,6 +14,7 @@ import 'package:steam_achievement_tracker/services/utils/demo_mode.dart';
 import 'package:steam_achievement_tracker/services/utils/extensions/int_extensions.dart';
 import 'package:steam_achievement_tracker/services/utils/extensions/string_extensions.dart';
 import 'package:steam_achievement_tracker/services/widgets/async_state_panel.dart';
+import 'package:steam_achievement_tracker/services/widgets/app_skeletons.dart';
 import 'package:steam_achievement_tracker/services/widgets/button.dart';
 import 'package:steam_achievement_tracker/services/widgets/custom_image.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
@@ -89,11 +90,7 @@ class HomeScreen extends StatelessWidget {
         ),
         builder: (controller) {
           return controller.obx(
-            onLoading: const Center(
-              child: CircularProgressIndicator(
-                color: KColors.menuHighlightColor,
-              ),
-            ),
+            onLoading: const HomeScreenSkeleton(),
             onError: (error) => AsyncStatePanel(
               icon: Icons.cloud_off_rounded,
               title: 'Dashboard Unavailable',

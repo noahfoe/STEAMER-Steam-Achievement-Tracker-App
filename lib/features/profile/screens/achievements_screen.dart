@@ -8,6 +8,7 @@ import 'package:steam_achievement_tracker/services/utils/colors.dart';
 import 'package:steam_achievement_tracker/services/utils/database.dart';
 import 'package:steam_achievement_tracker/services/utils/preference_utils.dart';
 import 'package:steam_achievement_tracker/services/widgets/async_state_panel.dart';
+import 'package:steam_achievement_tracker/services/widgets/app_skeletons.dart';
 import 'package:steam_achievement_tracker/services/widgets/network_icon_image.dart';
 import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
@@ -146,11 +147,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     required List<AchievementGameSummary> visibleGames,
   }) {
     if (_isLoading && _summaries.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(
-          color: KColors.menuHighlightColor,
-        ),
-      );
+      return const AchievementsScreenSkeleton();
     }
 
     if (_errorMessage != null && _summaries.isEmpty) {
