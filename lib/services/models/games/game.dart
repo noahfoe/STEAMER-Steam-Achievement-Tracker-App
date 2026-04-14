@@ -67,17 +67,32 @@ class Game extends Equatable {
   }
 
   factory Game.fromMap(Map<String, dynamic> map) {
+    final appId = map['appid'] as int;
+    final rawIconUrl = (map['img_icon_url'] as String?) ??
+        (map['icon'] as String?) ??
+        (map['logo'] as String?) ??
+        '';
+    final rawLogoUrl = (map['img_logo_url'] as String?) ??
+        (map['logo'] as String?) ??
+        rawIconUrl;
+
     return Game(
-      appId: map['appid'] as int,
+      appId: appId,
       name: map['name'] as String,
       playtimeForever:
           map['playtime_forever'] != null ? map['playtime_forever'] as int : 0,
       playtime2Weeks:
           map['playtime_2weeks'] != null ? map['playtime_2weeks'] as int : 0,
-      imgIconUrl:
-          'https://media.steampowered.com/steamcommunity/public/images/apps/${map['appid']}/${map['img_icon_url']}.jpg',
-      imgLogoUrl:
-          'https://media.steampowered.com/steamcommunity/public/images/apps/${map['appid']}/${map['img_logo_url']}.jpg',
+      imgIconUrl: _resolveSteamImageUrl(
+        appId: appId,
+        rawValue: rawIconUrl,
+        fallbackValue: rawLogoUrl,
+      ),
+      imgLogoUrl: _resolveSteamImageUrl(
+        appId: appId,
+        rawValue: rawLogoUrl,
+        fallbackValue: rawIconUrl,
+      ),
       hasCommunityVisibleStats: map['has_community_visible_stats'] ?? false,
     );
   }
@@ -116,5 +131,33 @@ class Game extends Equatable {
       imgLogoUrl ?? '',
       hasCommunityVisibleStats ?? false,
     ];
+  }
+
+  static String _resolveSteamImageUrl({
+    required int appId,
+    required String rawValue,
+    String fallbackValue = '',
+  }) {
+    if (_isAbsoluteUrl(rawValue)) {
+      return rawValue;
+    }
+
+    if (rawValue.isNotEmpty) {
+      return 'https://media.steampowered.com/steamcommunity/public/images/apps/$appId/$rawValue.jpg';
+    }
+
+    if (_isAbsoluteUrl(fallbackValue)) {
+      return fallbackValue;
+    }
+
+    if (fallbackValue.isNotEmpty) {
+      return 'https://media.steampowered.com/steamcommunity/public/images/apps/$appId/$fallbackValue.jpg';
+    }
+
+    return '';
+  }
+
+  static bool _isAbsoluteUrl(String value) {
+    return value.startsWith('http://') || value.startsWith('https://');
   }
 }

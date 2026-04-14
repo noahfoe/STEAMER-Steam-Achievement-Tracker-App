@@ -47,6 +47,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   List<AchievementGameSummary> _summaries = <AchievementGameSummary>[];
   bool _isLoading = true;
   String? _errorMessage;
+  String _loadingMessage = 'Refreshing achievement summaries...';
 
   @override
   void initState() {
@@ -64,6 +65,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _loadingMessage = 'Refreshing achievement summaries...';
     });
 
     try {
@@ -81,6 +83,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
       final fresh = await _database.getAchievementGameSummaries(
         steamID: widget.steamID,
+        forceRefresh: forceRefresh,
       );
       _summaries = fresh;
       await PreferenceUtils.setAchievementGameSummaries(fresh);
@@ -183,9 +186,9 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                   color: KColors.lightBackgroundColor.withValues(alpha: 0.55),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  SizedBox(
+                  const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
@@ -193,11 +196,11 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                       color: KColors.menuHighlightColor,
                     ),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Refreshing achievement summaries...',
-                      style: TextStyle(
+                      _loadingMessage,
+                      style: const TextStyle(
                         color: KColors.activeTextColor,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,

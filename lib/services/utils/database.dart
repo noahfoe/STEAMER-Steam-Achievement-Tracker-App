@@ -77,14 +77,17 @@ class Database extends GetxController {
 
   /// Gets the user's basic Steam information from the Steam API.
   Future<UserSteamInformation> getPlayerSummary(
-      {required String steamID}) async {
+      {required String steamID, bool forceRefresh = false}) async {
     if (DemoMode.isDemoSteamId(steamID)) {
       return DemoMode.playerSummary;
     }
 
     final response = await _getJson(
       '/player-summary',
-      {'steamId': steamID},
+      {
+        'steamId': steamID,
+        if (forceRefresh) 'refresh': '1',
+      },
     );
 
     final players =
@@ -104,6 +107,7 @@ class Database extends GetxController {
       getGlobalAchievementPercentagesForApp({
     required int appID,
     String? steamID,
+    bool forceRefresh = false,
   }) async {
     if (steamID != null && DemoMode.isDemoSteamId(steamID)) {
       return DemoMode.percentagesForApp(appID).obs;
@@ -111,7 +115,10 @@ class Database extends GetxController {
 
     final body = await _getJson(
       '/global-achievement-percentages',
-      {'appId': '$appID'},
+      {
+        'appId': '$appID',
+        if (forceRefresh) 'refresh': '1',
+      },
     );
     final achievements = (body['achievementpercentages']
         as Map<String, dynamic>?)?['achievements'] as List?;
@@ -129,14 +136,20 @@ class Database extends GetxController {
   }
 
   /// Gets the user's games list from the Steam API.
-  Future<RxList<Game>> getPlayerGamesList({required String steamID}) async {
+  Future<RxList<Game>> getPlayerGamesList({
+    required String steamID,
+    bool forceRefresh = false,
+  }) async {
     if (DemoMode.isDemoSteamId(steamID)) {
       return DemoMode.games.obs;
     }
 
     final body = await _getJson(
       '/owned-games',
-      {'steamId': steamID},
+      {
+        'steamId': steamID,
+        if (forceRefresh) 'refresh': '1',
+      },
     );
 
     final games =
@@ -154,14 +167,20 @@ class Database extends GetxController {
     return temp;
   }
 
-  Future<DashboardSummary> getDashboardSummary({required String steamID}) async {
+  Future<DashboardSummary> getDashboardSummary({
+    required String steamID,
+    bool forceRefresh = false,
+  }) async {
     if (DemoMode.isDemoSteamId(steamID)) {
       return DemoMode.dashboardSummary();
     }
 
     final body = await _getJson(
       '/dashboard-summary',
-      {'steamId': steamID},
+      {
+        'steamId': steamID,
+        if (forceRefresh) 'refresh': '1',
+      },
     );
 
     final summary = body['summary'];
@@ -176,6 +195,7 @@ class Database extends GetxController {
 
   Future<List<AchievementGameSummary>> getAchievementGameSummaries({
     required String steamID,
+    bool forceRefresh = false,
   }) async {
     if (DemoMode.isDemoSteamId(steamID)) {
       return DemoMode.achievementSummaries();
@@ -183,7 +203,10 @@ class Database extends GetxController {
 
     final body = await _getJson(
       '/achievement-summaries',
-      {'steamId': steamID},
+      {
+        'steamId': steamID,
+        if (forceRefresh) 'refresh': '1',
+      },
     );
 
     final summaries = body['games'];
@@ -262,7 +285,7 @@ class Database extends GetxController {
   /// This function also calls [getAchievements] to get the user's achievements for the game.
   /// Which is then added to the GameDetails object.
   Future<GameDetails> getGameDetails(
-      {required String steamID, required int appID}) async {
+      {required String steamID, required int appID, bool forceRefresh = false}) async {
     if (DemoMode.isDemoSteamId(steamID)) {
       return DemoMode.detailsForApp(appID);
     }
@@ -272,6 +295,7 @@ class Database extends GetxController {
       {
         'steamId': steamID,
         'appId': '$appID',
+        if (forceRefresh) 'refresh': '1',
       },
     );
 
@@ -286,6 +310,7 @@ class Database extends GetxController {
             gameDetails: temp,
             steamID: steamID,
             appID: appID,
+            forceRefresh: forceRefresh,
           ) ??
           temp;
     }
@@ -298,6 +323,7 @@ class Database extends GetxController {
     required Rx<GameDetails> gameDetails,
     required String steamID,
     required int appID,
+    bool forceRefresh = false,
   }) async {
     if (DemoMode.isDemoSteamId(steamID)) {
       return DemoMode.detailsForApp(appID).obs;
@@ -308,6 +334,7 @@ class Database extends GetxController {
       {
         'steamId': steamID,
         'appId': '$appID',
+        if (forceRefresh) 'refresh': '1',
       },
     );
 
@@ -353,14 +380,20 @@ class Database extends GetxController {
     return gameDetails;
   }
 
-  Future<int> getSteamLevel({required String steamID}) async {
+  Future<int> getSteamLevel({
+    required String steamID,
+    bool forceRefresh = false,
+  }) async {
     if (DemoMode.isDemoSteamId(steamID)) {
       return DemoMode.steamLevel;
     }
 
     final value = await _getJson(
       '/steam-level',
-      {'steamId': steamID},
+      {
+        'steamId': steamID,
+        if (forceRefresh) 'refresh': '1',
+      },
     );
     final level = (value['response'] as Map<String, dynamic>?)?['player_level'];
     if (level is! int) {

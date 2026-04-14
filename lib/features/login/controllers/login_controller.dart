@@ -31,12 +31,14 @@ class LoginController extends GetxController {
         return;
       }
       steamID.value = temp;
+      await PreferenceUtils.clearCachedData();
       await PreferenceUtils.setLastSteamId(steamID.value);
       // Now with a steam id, we can send them to the home screen
       Navigator.of(context).pushReplacement(
         AppRoute.fadeSlide(
           builder: (context) => HomeScreen(
             steamID: steamID.value,
+            forceInitialRefresh: true,
           ),
         ),
       );

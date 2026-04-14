@@ -20,10 +20,12 @@ import 'package:steam_achievement_tracker/services/widgets/my_app_bar.dart';
 
 class HomeScreen extends StatelessWidget {
   final String steamID;
+  final bool forceInitialRefresh;
 
   const HomeScreen({
     super.key,
     required this.steamID,
+    this.forceInitialRefresh = false,
   });
 
   String _achievementStatValue(
@@ -81,7 +83,10 @@ class HomeScreen extends StatelessWidget {
       appBar: myAppBar(title: 'STEAMER'),
       drawer: const _Drawer(),
       body: GetBuilder<HomeScreenController>(
-        init: HomeScreenController(steamID: steamID),
+        init: HomeScreenController(
+          steamID: steamID,
+          forceInitialRefresh: forceInitialRefresh,
+        ),
         builder: (controller) {
           return controller.obx(
             onLoading: const Center(
@@ -98,238 +103,213 @@ class HomeScreen extends StatelessWidget {
             ),
             (state) => Stack(
               children: [
-                NotificationListener<ScrollNotification>(
-                  onNotification: (notification) {
-                    if (notification.metrics.axis != Axis.vertical) {
-                      return false;
-                    }
+                RefreshIndicator.noSpinner(
+                  onRefresh: controller.handlePullToRefresh,
+                  onStatusChange: controller.handleRefreshStatusChange,
+                  triggerMode: RefreshIndicatorTriggerMode.onEdge,
+                  notificationPredicate: (notification) => notification.depth == 0,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final columns = constraints.maxWidth >= 920
+                          ? 3
+                          : constraints.maxWidth >= 620
+                              ? 2
+                              : 1;
 
-                    if (notification is OverscrollNotification &&
-                        notification.metrics.pixels <=
-                            notification.metrics.minScrollExtent &&
-                        notification.overscroll < 0) {
-                      controller.updatePullRefreshProgress(
-                        (-notification.overscroll / 80).clamp(0.0, 1.0),
-                      );
-                    } else if (notification is ScrollUpdateNotification &&
-                        notification.metrics.pixels > 0) {
-                      controller.resetPullRefreshProgress();
-                    } else if (notification is ScrollEndNotification) {
-                      controller.resetPullRefreshProgress();
-                    }
-
-                    return false;
-                  },
-                  child: RefreshIndicator(
-                    onRefresh: controller.handlePullToRefresh,
-                    color: Colors.transparent,
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    displacement: 76,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final columns = constraints.maxWidth >= 920
-                            ? 3
-                            : constraints.maxWidth >= 620
-                                ? 2
-                                : 1;
-
-                        return ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-                          children: [
-                            Obx(
-                              () {
-                                final summary = controller.dashboardSummary.value;
-                                final totalGames = _summaryTotalGames(
-                                  controller,
-                                  summary,
-                                );
-                                final totalHoursPlayed = _summaryTotalHours(
-                                  controller,
-                                  summary,
-                                );
-                                return _HeroPanel(
-                                  summary: controller.playerSummary.value,
-                                  steamLevel: controller.steamLevel.value,
-                                  steamId: controller.steamID,
-                                  totalGames: totalGames,
-                                  totalHoursPlayed: totalHoursPlayed,
-                                  onViewLibrary: () =>
-                                      controller.navigateToGamesScreen(context),
-                                  onViewAchievements: () {
-                                    Navigator.of(context).push(
-                                      AppRoute.fadeSlide(
-                                        builder: (context) => AchievementsScreen(
-                                          steamID: controller.steamID,
-                                          playerGames: controller.playerGamesList,
-                                        ),
+                      return ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                        children: [
+                          Obx(
+                            () {
+                              final summary = controller.dashboardSummary.value;
+                              final totalGames = _summaryTotalGames(
+                                controller,
+                                summary,
+                              );
+                              final totalHoursPlayed = _summaryTotalHours(
+                                controller,
+                                summary,
+                              );
+                              return _HeroPanel(
+                                summary: controller.playerSummary.value,
+                                steamLevel: controller.steamLevel.value,
+                                steamId: controller.steamID,
+                                totalGames: totalGames,
+                                totalHoursPlayed: totalHoursPlayed,
+                                onViewLibrary: () =>
+                                    controller.navigateToGamesScreen(context),
+                                onViewAchievements: () {
+                                  Navigator.of(context).push(
+                                    AppRoute.fadeSlide(
+                                      builder: (context) => AchievementsScreen(
+                                        steamID: controller.steamID,
+                                        playerGames: controller.playerGamesList,
                                       ),
-                                    );
-                                  },
-                                  isDemoMode:
-                                      DemoMode.isDemoSteamId(controller.steamID),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 18),
-                            const _SectionLabel(
-                              title: 'Dashboard',
-                              subtitle:
-                                  'A quick snapshot of your profile, library, and achievement progress.',
-                            ),
-                            const SizedBox(height: 14),
-                            Obx(
-                              () {
-                                final summary = controller.dashboardSummary.value;
-                                final totalAchievements = _summaryAchievementValue(
-                                  controller,
-                                  summary,
-                                  summary.totalAchievements,
-                                  () => controller.gameDetails
-                                      .map((e) => e.allAchievements ?? const [])
-                                      .expand((e) => e)
-                                      .length,
-                                );
-                                final unlockedAchievements =
-                                    _summaryAchievementValue(
-                                  controller,
-                                  summary,
-                                  summary.unlockedAchievements,
-                                  () => controller.gameDetails
-                                      .map(
-                                        (e) => e.unlockedAchievements ?? const [],
-                                      )
-                                      .expand((e) => e)
-                                      .length,
-                                );
-                                final lockedAchievements =
-                                    _summaryAchievementValue(
-                                  controller,
-                                  summary,
-                                  summary.lockedAchievements,
-                                  () => controller.gameDetails
-                                      .map((e) => e.lockedAchievements ?? const [])
-                                      .expand((e) => e)
-                                      .length,
-                                );
-                                final totalGames =
-                                    _summaryTotalGames(controller, summary);
-                                final totalHoursPlayed =
-                                    _summaryTotalHours(controller, summary);
-                                final perfectedGames = _summaryAchievementValue(
-                                  controller,
-                                  summary,
-                                  summary.perfectedGames,
-                                  () => controller.gameDetails
-                                      .where(
-                                        (e) =>
-                                            (e.allAchievements ?? const [])
-                                                .isNotEmpty &&
-                                            (e.lockedAchievements ?? const [])
-                                                .isEmpty,
-                                      )
-                                      .length,
-                                );
-
-                                final statCards = [
-                                  _StatCard(
-                                    title: 'Total Achievements',
-                                    value: totalAchievements,
-                                    helper:
-                                        'Every tracked achievement across your games',
-                                    icon: Icons.emoji_events_outlined,
-                                    accent: KColors.menuHighlightColor,
-                                  ),
-                                  _StatCard(
-                                    title: 'Unlocked',
-                                    value: unlockedAchievements,
-                                    helper:
-                                        'Achievements you have already earned',
-                                    icon: Icons.check_circle_outline_rounded,
-                                    accent: const Color(0xff7dd3a3),
-                                  ),
-                                  _StatCard(
-                                    title: 'Locked',
-                                    value: lockedAchievements,
-                                    helper: 'Still waiting for you to finish',
-                                    icon: Icons.lock_outline_rounded,
-                                    accent: const Color(0xfff4b266),
-                                  ),
-                                  _StatCard(
-                                    title: 'Total Games',
-                                    value: totalGames,
-                                    helper:
-                                        'Visible games in your current library',
-                                    icon: Icons.library_books_outlined,
-                                    accent: const Color(0xff8ab4ff),
-                                  ),
-                                  _StatCard(
-                                    title: 'Total Hours Played',
-                                    value: totalHoursPlayed,
-                                    helper:
-                                        'Combined playtime across your library',
-                                    icon: Icons.schedule_rounded,
-                                    accent: const Color(0xff85d7ff),
-                                  ),
-                                  _StatCard(
-                                    title: 'Perfected Games',
-                                    value: perfectedGames,
-                                    helper:
-                                        'Games with every tracked achievement unlocked',
-                                    icon: Icons.verified_rounded,
-                                    accent: const Color(0xff89e5c6),
-                                  ),
-                                ];
-
-                                const horizontalSpacing = 14.0;
-                                final cardWidth = columns == 1
-                                    ? constraints.maxWidth
-                                    : (constraints.maxWidth -
-                                            (horizontalSpacing * (columns - 1))) /
-                                        columns;
-
-                                return Column(
-                                  children: [
-                                    Wrap(
-                                      spacing: horizontalSpacing,
-                                      runSpacing: 14,
-                                      children: statCards
-                                          .map(
-                                            (card) => SizedBox(
-                                              width: cardWidth,
-                                              child: card,
-                                            ),
-                                          )
-                                          .toList(growable: false),
                                     ),
-                                    const SizedBox(height: 22),
-                                    _ProgressHighlights(
-                                      totalAchievements: totalAchievements,
-                                      unlockedAchievements:
-                                          unlockedAchievements,
-                                      perfectedGames: perfectedGames,
-                                      totalGames: totalGames,
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 20),
-                            const Center(
-                              child: Text(
-                                'Pull down to refresh your Steam profile and achievements.',
-                                style: TextStyle(
-                                  color: KColors.inactiveTextColor,
-                                  fontSize: 13,
+                                  );
+                                },
+                                isDemoMode:
+                                    DemoMode.isDemoSteamId(controller.steamID),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 18),
+                          const _SectionLabel(
+                            title: 'Dashboard',
+                            subtitle:
+                                'A quick snapshot of your profile, library, and achievement progress.',
+                          ),
+                          const SizedBox(height: 14),
+                          Obx(
+                            () {
+                              final summary = controller.dashboardSummary.value;
+                              final totalAchievements = _summaryAchievementValue(
+                                controller,
+                                summary,
+                                summary.totalAchievements,
+                                () => controller.gameDetails
+                                    .map((e) => e.allAchievements ?? const [])
+                                    .expand((e) => e)
+                                    .length,
+                              );
+                              final unlockedAchievements =
+                                  _summaryAchievementValue(
+                                controller,
+                                summary,
+                                summary.unlockedAchievements,
+                                () => controller.gameDetails
+                                    .map(
+                                      (e) => e.unlockedAchievements ?? const [],
+                                    )
+                                    .expand((e) => e)
+                                    .length,
+                              );
+                              final lockedAchievements =
+                                  _summaryAchievementValue(
+                                controller,
+                                summary,
+                                summary.lockedAchievements,
+                                () => controller.gameDetails
+                                    .map((e) => e.lockedAchievements ?? const [])
+                                    .expand((e) => e)
+                                    .length,
+                              );
+                              final totalGames =
+                                  _summaryTotalGames(controller, summary);
+                              final totalHoursPlayed =
+                                  _summaryTotalHours(controller, summary);
+                              final perfectedGames = _summaryAchievementValue(
+                                controller,
+                                summary,
+                                summary.perfectedGames,
+                                () => controller.gameDetails
+                                    .where(
+                                      (e) =>
+                                          (e.allAchievements ?? const [])
+                                              .isNotEmpty &&
+                                          (e.lockedAchievements ?? const [])
+                                              .isEmpty,
+                                    )
+                                    .length,
+                              );
+
+                              final statCards = [
+                                _StatCard(
+                                  title: 'Total Achievements',
+                                  value: totalAchievements,
+                                  helper:
+                                      'Every tracked achievement across your games',
+                                  icon: Icons.emoji_events_outlined,
+                                  accent: KColors.menuHighlightColor,
                                 ),
-                                textAlign: TextAlign.center,
+                                _StatCard(
+                                  title: 'Unlocked',
+                                  value: unlockedAchievements,
+                                  helper:
+                                      'Achievements you have already earned',
+                                  icon: Icons.check_circle_outline_rounded,
+                                  accent: const Color(0xff7dd3a3),
+                                ),
+                                _StatCard(
+                                  title: 'Locked',
+                                  value: lockedAchievements,
+                                  helper: 'Still waiting for you to finish',
+                                  icon: Icons.lock_outline_rounded,
+                                  accent: const Color(0xfff4b266),
+                                ),
+                                _StatCard(
+                                  title: 'Total Games',
+                                  value: totalGames,
+                                  helper:
+                                      'Visible games in your current library',
+                                  icon: Icons.library_books_outlined,
+                                  accent: const Color(0xff8ab4ff),
+                                ),
+                                _StatCard(
+                                  title: 'Total Hours Played',
+                                  value: totalHoursPlayed,
+                                  helper:
+                                      'Combined playtime across your library',
+                                  icon: Icons.schedule_rounded,
+                                  accent: const Color(0xff85d7ff),
+                                ),
+                                _StatCard(
+                                  title: 'Perfected Games',
+                                  value: perfectedGames,
+                                  helper:
+                                      'Games with every tracked achievement unlocked',
+                                  icon: Icons.verified_rounded,
+                                  accent: const Color(0xff89e5c6),
+                                ),
+                              ];
+
+                              const horizontalSpacing = 14.0;
+                              final cardWidth = columns == 1
+                                  ? constraints.maxWidth
+                                  : (constraints.maxWidth -
+                                          (horizontalSpacing * (columns - 1))) /
+                                      columns;
+
+                              return Column(
+                                children: [
+                                  Wrap(
+                                    spacing: horizontalSpacing,
+                                    runSpacing: 14,
+                                    children: statCards
+                                        .map(
+                                          (card) => SizedBox(
+                                            width: cardWidth,
+                                            child: card,
+                                          ),
+                                        )
+                                        .toList(growable: false),
+                                  ),
+                                  const SizedBox(height: 22),
+                                  _ProgressHighlights(
+                                    totalAchievements: totalAchievements,
+                                    unlockedAchievements: unlockedAchievements,
+                                    perfectedGames: perfectedGames,
+                                    totalGames: totalGames,
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          const Center(
+                            child: Text(
+                              'Pull down to refresh your Steam profile and achievements.',
+                              style: TextStyle(
+                                color: KColors.inactiveTextColor,
+                                fontSize: 13,
                               ),
+                              textAlign: TextAlign.center,
                             ),
-                          ],
-                        );
-                      },
-                    ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
                 const _PullRefreshOverlay(),
@@ -736,6 +716,7 @@ class _PullRefreshOverlay extends GetView<HomeScreenController> {
           child: Obx(() {
             final progress = controller.pullRefreshProgress.value;
             final isRefreshing = controller.isPullRefreshing.value;
+            final status = controller.pullRefreshStatus.value;
             final isVisible = progress > 0 || isRefreshing;
 
             if (!isVisible) {
@@ -747,7 +728,8 @@ class _PullRefreshOverlay extends GetView<HomeScreenController> {
             final scale = isRefreshing ? 1.0 : 0.86 + (progress * 0.14);
             final label = isRefreshing
                 ? 'Loading...'
-                : progress >= 0.92
+                : status == RefreshIndicatorStatus.armed ||
+                        status == RefreshIndicatorStatus.snap
                     ? 'Release to refresh'
                     : 'Pull to refresh';
 

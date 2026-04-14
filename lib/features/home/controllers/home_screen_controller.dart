@@ -14,10 +14,14 @@ import 'package:steam_achievement_tracker/services/utils/preference_utils.dart';
 
 class HomeScreenController extends GetxController with StateMixin<void> {
   final String steamID;
+  final bool forceInitialRefresh;
 
   final Database _database = Database.instance;
 
-  HomeScreenController({required this.steamID}) {
+  HomeScreenController({
+    required this.steamID,
+    this.forceInitialRefresh = false,
+  }) {
     init();
   }
 
@@ -30,12 +34,17 @@ class HomeScreenController extends GetxController with StateMixin<void> {
   final RxBool isLoadingApiProgress = false.obs;
   final RxBool isPullRefreshing = false.obs;
   final RxDouble pullRefreshProgress = 0.0.obs;
+  final Rx<RefreshIndicatorStatus?> pullRefreshStatus =
+      Rx<RefreshIndicatorStatus?>(null);
   final RxInt completedApiSteps = 0.obs;
   final RxInt totalApiSteps = 0.obs;
   final RxString apiProgressStatus = ''.obs;
 
   init() async {
-    await _loadHomeData(showLoadingState: true, forceRefresh: false);
+    await _loadHomeData(
+      showLoadingState: true,
+      forceRefresh: forceInitialRefresh,
+    );
   }
 
   void getSharedPreferences() {
@@ -71,7 +80,10 @@ class HomeScreenController extends GetxController with StateMixin<void> {
           _ApiProgressStep(
             label: 'Loading Steam level',
             task: () async {
-              final level = await _database.getSteamLevel(steamID: steamID);
+              final level = await _database.getSteamLevel(
+                steamID: steamID,
+                forceRefresh: forceRefresh,
+              );
               steamLevel.value = level;
               await PreferenceUtils.setSteamLevel(level);
             },
@@ -84,7 +96,10 @@ class HomeScreenController extends GetxController with StateMixin<void> {
           _ApiProgressStep(
             label: 'Loading Steam profile',
             task: () async {
-              final summary = await _database.getPlayerSummary(steamID: steamID);
+              final summary = await _database.getPlayerSummary(
+                steamID: steamID,
+                forceRefresh: forceRefresh,
+              );
               playerSummary.value = summary;
               await PreferenceUtils.setPlayerSummary(summary);
             },
@@ -97,8 +112,10 @@ class HomeScreenController extends GetxController with StateMixin<void> {
           _ApiProgressStep(
             label: 'Loading dashboard summary',
             task: () async {
-              final summary =
-                  await _database.getDashboardSummary(steamID: steamID);
+              final summary = await _database.getDashboardSummary(
+                steamID: steamID,
+                forceRefresh: forceRefresh,
+              );
               dashboardSummary.value = summary;
               await PreferenceUtils.setDashboardSummary(summary);
             },
@@ -111,7 +128,10 @@ class HomeScreenController extends GetxController with StateMixin<void> {
           _ApiProgressStep(
             label: 'Loading library',
             task: () async {
-              final games = await _database.getPlayerGamesList(steamID: steamID);
+              final games = await _database.getPlayerGamesList(
+                steamID: steamID,
+                forceRefresh: forceRefresh,
+              );
               playerGamesList.assignAll(games);
               await PreferenceUtils.setPlayerGamesList(playerGamesList);
             },
@@ -194,6 +214,7 @@ class HomeScreenController extends GetxController with StateMixin<void> {
     }
 
     isPullRefreshing.value = true;
+    pullRefreshStatus.value = RefreshIndicatorStatus.refresh;
     pullRefreshProgress.value = 1;
     final stopwatch = Stopwatch()..start();
 
@@ -206,23 +227,34 @@ class HomeScreenController extends GetxController with StateMixin<void> {
         await Future<void>.delayed(minimumVisibleDuration - elapsed);
       }
       isPullRefreshing.value = false;
+      pullRefreshStatus.value = null;
       pullRefreshProgress.value = 0;
     }
   }
 
-  void updatePullRefreshProgress(double progress) {
+  void handleRefreshStatusChange(RefreshIndicatorStatus? status) {
+    pullRefreshStatus.value = status;
+
     if (isPullRefreshing.value) {
       pullRefreshProgress.value = 1;
       return;
     }
-    pullRefreshProgress.value = progress.clamp(0.0, 1.0);
-  }
 
-  void resetPullRefreshProgress() {
-    if (isPullRefreshing.value) {
-      return;
+    switch (status) {
+      case RefreshIndicatorStatus.drag:
+        pullRefreshProgress.value = 0.58;
+        break;
+      case RefreshIndicatorStatus.armed:
+      case RefreshIndicatorStatus.snap:
+      case RefreshIndicatorStatus.refresh:
+        pullRefreshProgress.value = 1;
+        break;
+      case RefreshIndicatorStatus.done:
+      case RefreshIndicatorStatus.canceled:
+      case null:
+        pullRefreshProgress.value = 0;
+        break;
     }
-    pullRefreshProgress.value = 0;
   }
 
   Future<void> signOut(BuildContext context) async {
@@ -235,6 +267,7 @@ class HomeScreenController extends GetxController with StateMixin<void> {
     isLoadingApiProgress.value = false;
     isPullRefreshing.value = false;
     pullRefreshProgress.value = 0;
+    pullRefreshStatus.value = null;
     completedApiSteps.value = 0;
     totalApiSteps.value = 0;
     apiProgressStatus.value = '';
